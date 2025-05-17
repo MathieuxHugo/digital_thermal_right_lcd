@@ -8,7 +8,6 @@ version = "1.0"
 dependencies = [
   "numpy",
   "hid",
-  "time",
   "psutil",
   "pyamdgpuinfo",
 ]

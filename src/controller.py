@@ -122,13 +122,11 @@ class Controller:
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.colors = np.array([["000000", "ffe000"]] * NUMBER_OF_LEDS)
 
-def main():
+def display_alternate_time(controller, cycle_duration=5):
     cpt = 0
-    CYCLE_DURATION = 5
-    controller = Controller()
-    while(True):
-        controller.update() 
-        if cpt<CYCLE_DURATION/2:
+    while True:
+        controller.update()
+        if cpt < cycle_duration // 2:
             controller.set_colors("cpu", "ff0000")
             controller.display_time()
             controller.display_metrics(devices=['gpu'])
@@ -136,10 +134,41 @@ def main():
             controller.set_colors("gpu", "ff0000")
             controller.display_time(device="gpu")
             controller.display_metrics(devices=['cpu'])
-        cpt=(cpt+1)%CYCLE_DURATION
+        cpt = (cpt + 1) % cycle_duration
         controller.send_packets()
         time.sleep(1)
 
+def display_only_metrics(controller):
+    while True:
+        controller.update()
+        controller.set_colors("cpu", "ff0000")
+        controller.set_colors("gpu", "ff0000")
+        controller.display_metrics(devices=["cpu", "gpu"])
+        controller.send_packets()
+        time.sleep(1)
+
+def display_only_time(controller):
+    while True:
+        controller.update()
+        controller.set_colors("cpu", "ff0000")
+        controller.set_colors("gpu", "ff0000")
+        controller.display_time(device="cpu")
+        controller.display_time(device="gpu")
+        controller.send_packets()
+        time.sleep(1)
+
+def main(display_mode="alternate_time"):
+    controller = Controller()
+    if display_mode == "alternate_time":
+        display_alternate_time(controller)
+    elif display_mode == "metrics":
+        display_only_metrics(controller)
+    elif display_mode == "time":
+        display_only_time(controller)
+    else:
+        print(f"Unknown display mode: {display_mode}")
 
 if __name__ == '__main__':
-    main()
+    import sys
+    mode = sys.argv[1] if len(sys.argv) > 1 else "alternate_time"
+    main(display_mode=mode)
