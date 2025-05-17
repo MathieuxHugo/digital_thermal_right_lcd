@@ -82,7 +82,7 @@ class Controller:
         else:
             self.config_path = config_path
         self.cpt = 0  # For alternate_time cycling
-        self.cycle_duration = 10
+        self.cycle_duration = 100
         self.display_mode = None
         self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)  # Will be set in update()
         self.update()
@@ -134,6 +134,13 @@ class Controller:
         self.set_leds(device+'_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
         self.set_leds(device+'_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
         self.colors[self.leds_indexes[device]] = self.time_colors[self.leds_indexes[device]]
+    
+    def display_time_with_seconds(self):
+        current_time = datetime.datetime.now()
+        self.set_leds('cpu_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
+        self.set_leds('gpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.second, array_length=2, fill_value=0)].flatten())))
+        
+        self.set_leds('cpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
 
 
     def update(self):
@@ -171,8 +178,7 @@ class Controller:
         elif self.display_mode == "metrics":
             self.display_metrics(devices=["cpu", "gpu"])
         elif self.display_mode == "time":
-            self.display_time(device="cpu")
-            self.display_time(device="gpu")
+            self.display_time_with_seconds()
         else:
             print(f"Unknown display mode: {self.display_mode}")
         self.send_packets()
@@ -182,7 +188,7 @@ def main():
     controller = Controller()
     while True:
         controller.update_and_display()
-        time.sleep(1)
+        time.sleep(0.1)
 
 if __name__ == '__main__':
     main()
