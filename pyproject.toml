@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hid-digital-lcd-controller"
+version = "1.0"
+dependencies = [
+  "numpy",
+  "hid",
+  "time",
+  "psutil",
+  "pyamdgpuinfo",
+]
+requires-python = ">= 3.8"
+readme = "README.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/digital_thermal_right_lcd"]

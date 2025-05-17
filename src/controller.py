@@ -59,6 +59,8 @@ class Controller:
             exit(1)
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.leds_indexes = {
+            "cpu" : list(range(0, 42)),
+            "gpu" : list(range(42, 84)),
             "cpu_led": list(range(0, 2)),
             "cpu_temp": list(range(2, 23)),
             "cpu_celsius": 23,
@@ -76,6 +78,9 @@ class Controller:
 
     def set_leds(self, key, value):
         self.leds[self.leds_indexes[key]] = value
+
+    def set_colors(self, key, color, index=1):
+        self.colors[self.leds_indexes[key],index] = color
 
     def send_packets(self):
         message = "".join([self.colors[i][self.leds[i]] for i in range(NUMBER_OF_LEDS)])
@@ -124,9 +129,11 @@ def main():
     while(True):
         controller.update() 
         if cpt<CYCLE_DURATION/2:
+            controller.set_colors("cpu", "ff0000")
             controller.display_time()
             controller.display_metrics(devices=['gpu'])
         else:
+            controller.set_colors("gpu", "ff0000")
             controller.display_time(device="gpu")
             controller.display_metrics(devices=['cpu'])
         cpt=(cpt+1)%CYCLE_DURATION
