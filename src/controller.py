@@ -5,6 +5,7 @@ import time
 import datetime 
 import json
 import os
+import sys
 
 
 NUMBER_OF_LEDS = 84
@@ -195,11 +196,17 @@ class Controller:
         self.send_packets()
 
 
-def main():
-    controller = Controller()
+def main(config_path):
+    controller = Controller(config_path=config_path)
     while True:
         controller.update_and_display()
         time.sleep(0.1)
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) > 1:
+        config_path = sys.argv[1]
+    else:
+        config_path = None
+    main(config_path)
+
+    
