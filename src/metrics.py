@@ -60,7 +60,9 @@ def get_cpu_temp():
         except:
             pass
     
-    return None
+    
+    print(f"Warning: Could not retrieve CPU temp.")
+    return 0
 
 def get_gpu_temp():
     """Attempt to get GPU temperature using various methods."""
@@ -103,8 +105,44 @@ def get_gpu_temp():
         except:
             pass
     
-    return None
+    print(f"Warning: Could not retrieve GPU temp.")
+    return 0
 
+def get_cpu_usage():
+    """Get CPU usage percentage."""
+    try:
+        return psutil.cpu_percent(interval=None)
+    except:
+        print("Warning: Could not retrieve CPU usage.")
+        return 0
+
+def get_gpu_usage():
+     # GPU usage implementation
+    try:
+        if gpu is None:
+            try:
+                # NVIDIA GPUs using pynvml
+                from pynvml import (nvmlInit, nvmlShutdown,
+                                nvmlDeviceGetHandleByIndex,
+                                nvmlDeviceGetUtilizationRates)
+                nvmlInit()
+                try:
+                    handle = nvmlDeviceGetHandleByIndex(0)
+                    utilization = nvmlDeviceGetUtilizationRates(handle)
+                    return int(utilization.gpu)
+                finally:
+                    nvmlShutdown()
+            except:
+                output = subprocess.check_output(
+                    ['nvidia-smi', '--query-gpu=utilization.gpu',
+                        '--format=csv,noheader']
+                ).decode().strip()
+                return int(output.split()[0])
+        else: 
+            return int(gpu.query_load()*100)
+    except:
+        print("Could not retrieve gpu usage.")
+        return 0
 
 def get_system_metrics():
     """
@@ -120,36 +158,11 @@ def get_system_metrics():
     metrics = {
         'cpu_temp': int(get_cpu_temp()),
         'gpu_temp': int(get_gpu_temp()),
-        'cpu_usage': int(psutil.cpu_percent(interval=None)),
-        'gpu_usage': 0
+        'cpu_usage': int(get_cpu_usage()),
+        'gpu_usage': int(get_gpu_usage())
     }
 
-    # GPU usage implementation
-    try:
-        if gpu is None:
-            try:
-                # NVIDIA GPUs using pynvml
-                from pynvml import (nvmlInit, nvmlShutdown,
-                                nvmlDeviceGetHandleByIndex,
-                                nvmlDeviceGetUtilizationRates)
-                nvmlInit()
-                try:
-                    handle = nvmlDeviceGetHandleByIndex(0)
-                    utilization = nvmlDeviceGetUtilizationRates(handle)
-                    metrics['gpu_usage'] = int(utilization.gpu)
-                finally:
-                    nvmlShutdown()
-            except:
-                output = subprocess.check_output(
-                    ['nvidia-smi', '--query-gpu=utilization.gpu',
-                        '--format=csv,noheader']
-                ).decode().strip()
-                metrics['gpu_usage'] = int(output.split()[0])
-        else: 
-            metrics['gpu_usage'] = int(gpu.query_load()*100)
-    except:
-        print("Could not retrieve gpu usage.")
-        metrics['gpu_usage'] = 0
+   
 
     return metrics
 

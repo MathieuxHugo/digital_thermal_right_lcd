@@ -155,7 +155,8 @@ class Controller:
                 self.time_colors = np.array(time_colors)
         else:
             self.display_mode = 'metrics'
-            self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
+            self.time_colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
+            self.metrics_colors = np.array(["ff0000"] * NUMBER_OF_LEDS)
 
     def update_and_display(self):
         self.update()
