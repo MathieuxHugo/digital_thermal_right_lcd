@@ -39,7 +39,7 @@ class LEDDisplayUI:
 
         # Add controls for group selection and color change
         self.controls_frame = ttk.LabelFrame(root, text="Controls", padding=(10, 10))
-        self.controls_frame.grid(row=1, column=0, columnspan=2, pady=10)
+        self.controls_frame.grid(row=2, column=0, columnspan=2, pady=10)
         self.create_controls()
 
     def create_segmented_digit_layout(self, frame, label, number_of_digits=3):
