@@ -3,6 +3,8 @@ from metrics import get_system_metrics
 import hid
 import time
 import datetime 
+import json
+import os
 
 
 NUMBER_OF_LEDS = 84
@@ -47,7 +49,7 @@ def get_number_array(temp, array_length=3, fill_value=-1):
         return narray
 
 class Controller:
-    def __init__(self):
+    def __init__(self, config_path=None):
         self.VENDOR_ID = 0x0416   
         self.PRODUCT_ID = 0x8001 
         self.HEADER = 'dadbdcdd000000000000000000000000fc00'
@@ -74,16 +76,31 @@ class Controller:
             "gpu_usage": list(range(58, 42, -1)),
             "gpu_percent_led": 42,
         }
+        # Configurable config path
+        if config_path is None:
+            self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
+        else:
+            self.config_path = config_path
+        self.cpt = 0  # For alternate_time cycling
+        self.cycle_duration = 10
+        self.display_mode = None
+        self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)  # Will be set in update()
         self.update()
+
+    def load_config(self):
+        try:
+            with open(self.config_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading config: {e}")
+            return None
 
     def set_leds(self, key, value):
         self.leds[self.leds_indexes[key]] = value
 
-    def set_colors(self, key, color, index=1):
-        self.colors[self.leds_indexes[key],index] = color
-
     def send_packets(self):
-        message = "".join([self.colors[i][self.leds[i]] for i in range(NUMBER_OF_LEDS)])
+        message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(NUMBER_OF_LEDS)])
+
         packet0 = bytes.fromhex(self.HEADER+self.UNKNOWN+message[:88])
         self.dev.write(packet0)
         packets = message[88:]
@@ -110,65 +127,61 @@ class Controller:
             self.set_leds(device+"_led", 1)
             self.set_temp(metrics[device+"_temp"], device=device)
             self.set_usage(metrics[device+"_usage"], device=device)
+            self.colors[self.leds_indexes[device]] = self.metrics_colors[self.leds_indexes[device]]
 
     def display_time(self, device="cpu"):
         current_time = datetime.datetime.now()
         self.set_leds(device+'_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
         self.set_leds(device+'_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
-
+        self.colors[self.leds_indexes[device]] = self.time_colors[self.leds_indexes[device]]
 
 
     def update(self):
         self.leds = np.array([0] * NUMBER_OF_LEDS)
-        self.colors = np.array([["000000", "ffe000"]] * NUMBER_OF_LEDS)
-
-def display_alternate_time(controller, cycle_duration=5):
-    cpt = 0
-    while True:
-        controller.update()
-        if cpt < cycle_duration // 2:
-            controller.set_colors("cpu", "ff0000")
-            controller.display_time()
-            controller.display_metrics(devices=['gpu'])
+        config = self.load_config()
+        if config:
+            self.display_mode = config.get('display_mode', 'metrics')
+            metrics_colors = config.get("metrics", {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
+            if len(metrics_colors) != NUMBER_OF_LEDS:
+                print(f"Warning: config metrics colors length mismatch, using default colors.")
+                self.metrics_colors = np.array(["ff0000"] * NUMBER_OF_LEDS)
+            else:
+                self.metrics_colors = np.array(metrics_colors)
+            time_colors = config.get("time", {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
+            if len(time_colors) != NUMBER_OF_LEDS:
+                print(f"Warning: config time colors length mismatch, using default colors.")
+                self.time_colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
+            else:
+                self.time_colors = np.array(time_colors)
         else:
-            controller.set_colors("gpu", "ff0000")
-            controller.display_time(device="gpu")
-            controller.display_metrics(devices=['cpu'])
-        cpt = (cpt + 1) % cycle_duration
-        controller.send_packets()
-        time.sleep(1)
+            self.display_mode = 'metrics'
+            self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
 
-def display_only_metrics(controller):
-    while True:
-        controller.update()
-        controller.set_colors("cpu", "ff0000")
-        controller.set_colors("gpu", "ff0000")
-        controller.display_metrics(devices=["cpu", "gpu"])
-        controller.send_packets()
-        time.sleep(1)
+    def update_and_display(self):
+        self.update()
+        if self.display_mode == "alternate_time":
+            if self.cpt < self.cycle_duration // 2:
+                self.display_time()
+                self.display_metrics(devices=['gpu'])
+            else:
+                self.display_time(device="gpu")
+                self.display_metrics(devices=['cpu'])
+            self.cpt = (self.cpt + 1) % self.cycle_duration
+        elif self.display_mode == "metrics":
+            self.display_metrics(devices=["cpu", "gpu"])
+        elif self.display_mode == "time":
+            self.display_time(device="cpu")
+            self.display_time(device="gpu")
+        else:
+            print(f"Unknown display mode: {self.display_mode}")
+        self.send_packets()
 
-def display_only_time(controller):
-    while True:
-        controller.update()
-        controller.set_colors("cpu", "ff0000")
-        controller.set_colors("gpu", "ff0000")
-        controller.display_time(device="cpu")
-        controller.display_time(device="gpu")
-        controller.send_packets()
-        time.sleep(1)
 
-def main(display_mode="alternate_time"):
+def main():
     controller = Controller()
-    if display_mode == "alternate_time":
-        display_alternate_time(controller)
-    elif display_mode == "metrics":
-        display_only_metrics(controller)
-    elif display_mode == "time":
-        display_only_time(controller)
-    else:
-        print(f"Unknown display mode: {display_mode}")
+    while True:
+        controller.update_and_display()
+        time.sleep(1)
 
 if __name__ == '__main__':
-    import sys
-    mode = sys.argv[1] if len(sys.argv) > 1 else "alternate_time"
-    main(display_mode=mode)
+    main()
