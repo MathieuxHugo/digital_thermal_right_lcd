@@ -139,27 +139,37 @@ class Controller:
         current_time = datetime.datetime.now()
         self.set_leds('cpu_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
         self.set_leds('gpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.second, array_length=2, fill_value=0)].flatten())))
-        
         self.set_leds('cpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
+        self.colors = self.time_colors
 
 
+    def get_config_colors(self, config, key="metrics"):
+        conf_colors = config.get(key, {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
+        if len(conf_colors) != NUMBER_OF_LEDS:
+            print(f"Warning: config metrics colors length mismatch, using default colors.")
+            colors = ["ff0000"] * NUMBER_OF_LEDS
+        else:
+            colors=[]
+            for color in conf_colors:
+                if "-" in color:
+                    start_color, end_color = color.split("-")
+                    start_color = np.array([int(start_color[i:i+2], 16) for i in (0, 2, 4)])
+                    end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
+                    factor = abs((self.cpt % self.cycle_duration) - (self.cycle_duration // 2)) / (self.cycle_duration // 2)
+                    interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
+                    interpolated_hex = ''.join(f"{c:02x}" for c in interpolated_color)
+                    colors.append(interpolated_hex)
+                else:
+                    colors.append(color)
+        return np.array(colors)
+    
     def update(self):
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         config = self.load_config()
         if config:
             self.display_mode = config.get('display_mode', 'metrics')
-            metrics_colors = config.get("metrics", {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
-            if len(metrics_colors) != NUMBER_OF_LEDS:
-                print(f"Warning: config metrics colors length mismatch, using default colors.")
-                self.metrics_colors = np.array(["ff0000"] * NUMBER_OF_LEDS)
-            else:
-                self.metrics_colors = np.array(metrics_colors)
-            time_colors = config.get("time", {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
-            if len(time_colors) != NUMBER_OF_LEDS:
-                print(f"Warning: config time colors length mismatch, using default colors.")
-                self.time_colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
-            else:
-                self.time_colors = np.array(time_colors)
+            self.metrics_colors = self.get_config_colors(config, key="metrics")
+            self.time_colors = self.get_config_colors(config, key="time")
         else:
             self.display_mode = 'metrics'
             self.time_colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
@@ -174,13 +184,14 @@ class Controller:
             else:
                 self.display_time(device="gpu")
                 self.display_metrics(devices=['cpu'])
-            self.cpt = (self.cpt + 1) % self.cycle_duration
         elif self.display_mode == "metrics":
             self.display_metrics(devices=["cpu", "gpu"])
         elif self.display_mode == "time":
             self.display_time_with_seconds()
         else:
             print(f"Unknown display mode: {self.display_mode}")
+        
+        self.cpt = (self.cpt + 1) % self.cycle_duration
         self.send_packets()
 
 
