@@ -25,30 +25,34 @@ class LEDDisplayUI:
         self.root.title("LED Display Layout")
 
         # Create frames for CPU and GPU
-        self.cpu_frame = ttk.LabelFrame(root, text="CPU Layout", padding=(10, 10))
-        self.cpu_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.cpu_frame = self.create_device_frame(root, "CPU", 0)
 
-        self.gpu_frame = ttk.LabelFrame(root, text="GPU Layout", padding=(10, 10))
-        self.gpu_frame.grid(row=1, column=0, padx=10, pady=10)
-
-        # Create LED layout for CPU and GPU
-        self.cpu_temp_leds = self.create_segmented_digit_layout(self.cpu_frame, "cpu_temp")
-        self.gpu_temp_leds = self.create_segmented_digit_layout(self.gpu_frame, "gpu_temp")
-        self.cpu_usage_leds = self.create_segmented_digit_layout(self.cpu_frame, "cpu_usage", number_of_digits=2)
-        self.gpu_usage_leds = self.create_segmented_digit_layout(self.gpu_frame, "gpu_usage", number_of_digits=2)
+        self.gpu_frame = self.create_device_frame(root, "GPU", 1)
 
         # Add controls for group selection and color change
         self.controls_frame = ttk.LabelFrame(root, text="Controls", padding=(10, 10))
         self.controls_frame.grid(row=2, column=0, columnspan=2, pady=10)
         self.create_controls()
 
+    def create_device_frame(self, root, device_name, row):
+        frame = ttk.LabelFrame(root, text=device_name.upper(), padding=(10, 10))
+        frame.grid(row=row, column=0, padx=10, pady=10)
+
+        temp_frame = ttk.LabelFrame(frame, text=device_name.upper()+" temp", padding=(10, 10))
+        temp_frame.grid(row=0, column=0, padx=10, pady=10)
+
+        usage_frame = ttk.LabelFrame(frame, text=device_name.upper()+" usage", padding=(10, 10))
+        usage_frame.grid(row=0, column=1, padx=10, pady=10)
+
+        # Create LED layout for CPU and GPU
+        self.cpu_temp_leds = self.create_segmented_digit_layout(temp_frame, device_name+"_temp")
+        self.cpu_usage_leds = self.create_segmented_digit_layout(usage_frame, device_name+"_usage", number_of_digits=2)
+        return frame
+    
+
+
     def create_segmented_digit_layout(self, frame, label, number_of_digits=3):
         leds = {}
-
-        # Add label for CPU/GPU
-        ttk.Label(
-            frame, text=label, font=("Arial", 14, "bold"), foreground="blue"
-        ).grid(row=0, column=0, columnspan=5, pady=5)
 
         # Create 3 digits, each with 7 segments
         for digit_index in range(number_of_digits):
@@ -88,7 +92,7 @@ class LEDDisplayUI:
                     "<Button-1>",
                     lambda event,
                     segment=segment_name, digit=digit_index, led_group=label: self.change_led_color(
-                        segment
+                        segment, digit, led_group
                     ),
                 )
 
