@@ -1,10 +1,25 @@
 # digital_thermal_right_lcd
 A program that displays temperature on the thermal right cpu cooler's digital screen for Linux.
 
+# To build the controller :
+
+## Create a python environement:
+`python3 -m venv .venv`
+
+## Source the environnement:
+`source .venv/bin/activate`
+
+## Install the requirements:
+`pip install -r requirements.txt`
+
 ## Build as executable : 
 `pyinstaller --onefile src/controller.py`
 
-## Set up as a service : 
+You may also launch it directcly with python
+
+`python3 src/controller.py config.json`
+
+# Set up as a service so it start at each startup: 
 ```
 [Unit]
 Description=Lcd screen controller
