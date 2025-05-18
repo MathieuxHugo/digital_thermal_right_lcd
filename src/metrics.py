@@ -1,6 +1,8 @@
 import subprocess
 import re
 import psutil
+import time
+
 try:
     import pyamdgpuinfo
 except Exception as e:
@@ -19,7 +21,7 @@ except Exception as e:
     wmi = None
 
 class Metrics:
-    def __init__(self):
+    def __init__(self, update_interval=0.5):
         self.metrics_functions = {
             'cpu_temp': None,
             'gpu_temp': None,
@@ -56,20 +58,25 @@ class Metrics:
                     continue
             if self.metrics_functions[metric] is None:
                 print(f"Warning: No suitable function found for {metric}.")
+        self.last_update = time.time()
+        self.update_interval = update_interval # seconds
 
     def get_metrics(self):
-        metrics = {}
-        for metric, function in self.metrics_functions.items():
-            if function is not None:
-                try:
-                    result = function()
-                    if result is None:
-                        metrics[metric] = 0
-                    else:
-                        metrics[metric] = int(result)
-                except Exception as e:
-                    print(f"Error getting {metric}: {e}")
-        return metrics
+        if time.time() - self.last_update < self.update_interval:
+            return self.metrics
+        else:
+            for metric, function in self.metrics_functions.items():
+                if function is not None:
+                    try:
+                        result = function()
+                        if result is None:
+                            self.metrics[metric] = 0
+                        else:
+                            self.metrics[metric] = int(result)
+                    except Exception as e:
+                        print(f"Error getting {metric}: {e}")
+            self.last_update = time.time()
+        return self.metrics
 
     def get_gpu_usage_amd(self):
         try:

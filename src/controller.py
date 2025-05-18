@@ -154,10 +154,25 @@ class Controller:
             colors=[]
             for color in conf_colors:
                 if "-" in color:
-                    start_color, end_color = color.split("-")
+                    split_color = color.split("-")
+                    if len(split_color) == 3:
+                        start_color, end_color, metric = split_color
+                        if self.metrics_min_value[metric] == self.metrics_max_value[metric]:
+                            print(f"Warning: {metric} min and max values are the same, using start color.")
+                            factor = 0
+                        else:
+                            factor = (self.metrics.get_metrics()[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
+                            if factor > 1:
+                                factor = 1
+                                print(f"Warning: {metric} value exceeds max value, clamping to 1.")
+                            elif factor < 0:
+                                factor = 0
+                                print(f"Warning: {metric} value below min value, clamping to 0.")
+                    else:
+                        start_color, end_color = split_color
+                        factor = 1-abs((self.cpt) - (self.cycle_duration)) / (self.cycle_duration)
                     start_color = np.array([int(start_color[i:i+2], 16) for i in (0, 2, 4)])
                     end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
-                    factor = abs(self.cpt - self.cycle_duration) / (self.cycle_duration)
                     interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
                     interpolated_hex = ''.join(f"{c:02x}" for c in interpolated_color)
                     colors.append(interpolated_hex)
@@ -167,52 +182,84 @@ class Controller:
     
     def update(self):
         self.leds = np.array([0] * NUMBER_OF_LEDS)
-        config = self.load_config()
-        if config:
-            self.display_mode = config.get('display_mode', 'metrics')
-            self.metrics_colors = self.get_config_colors(config, key="metrics")
-            self.time_colors = self.get_config_colors(config, key="time")
+        self.config = self.load_config()
+        if self.config:
+            self.metrics_max_value = {
+                "cpu_temp": self.config.get('cpu_max_temp', 90),
+                "gpu_temp": self.config.get('gpu_max_temp', 90),
+                "cpu_usage": self.config.get('cpu_max_usage', 100),
+                "gpu_usage": self.config.get('gpu_max_usage', 100),
+            }
+            self.metrics_min_value = {
+                "cpu_temp": self.config.get('cpu_min_temp', 30),
+                "gpu_temp": self.config.get('gpu_min_temp', 30),
+                "cpu_usage": self.config.get('cpu_min_usage', 0),
+                "gpu_usage": self.config.get('gpu_min_usage', 0),
+            }
+            self.display_mode = self.config.get('display_mode', 'metrics')
+            self.metrics_colors = self.get_config_colors(self.config, key="metrics")
+            self.time_colors = self.get_config_colors(self.config, key="time")
+            self.update_interval = self.config.get('update_interval', 0.1)
+            self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
+            self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
         else:
+            self.metrics_max_value = {
+                "cpu_temp": 90,
+                "gpu_temp": 90,
+                "cpu_usage": 100,
+                "gpu_usage": 100,
+            }
+            self.metrics_min_value = {
+                "cpu_temp": 30,
+                "gpu_temp": 30,
+                "cpu_usage": 0,
+                "gpu_usage": 0,
+            }
             self.display_mode = 'metrics'
             self.time_colors = np.array(["ffe000"] * NUMBER_OF_LEDS)
             self.metrics_colors = np.array(["ff0000"] * NUMBER_OF_LEDS)
+            self.update_interval = 0.1
+            self.cycle_duration = int(5/self.update_interval)
+            self.metrics.update_interval = 0.5
 
-    def update_and_display(self):
-        self.update()
-        if self.display_mode == "alternate_time":
-            if self.cpt < self.cycle_duration:
-                self.display_time()
-                self.display_metrics(devices=['gpu'])
-            else:
+    def display(self):
+        while True:
+            self.config = self.load_config()
+            self.update()
+            if self.display_mode == "alternate_time":
+                if self.cpt < self.cycle_duration:
+                    self.display_time()
+                    self.display_metrics(devices=['gpu'])
+                else:
+                    self.display_time(device="gpu")
+                    self.display_metrics(devices=['cpu'])
+            elif self.display_mode == "metrics":
+                self.display_metrics(devices=["cpu", "gpu"])
+            elif self.display_mode == "time":
+                self.display_time_with_seconds()
+            elif self.display_mode == "time_cpu":
                 self.display_time(device="gpu")
                 self.display_metrics(devices=['cpu'])
-        elif self.display_mode == "metrics":
-            self.display_metrics(devices=["cpu", "gpu"])
-        elif self.display_mode == "time":
-            self.display_time_with_seconds()
-        elif self.display_mode == "time_cpu":
-            self.display_time(device="gpu")
-            self.display_metrics(devices=['cpu'])
-        elif self.display_mode == "time_gpu":
-            self.display_time()
-            self.display_metrics(devices=['gpu'])
-        elif self.display_mode == "alternate_time_with_seconds":
-            if self.cpt < self.cycle_duration:
-                self.display_time_with_seconds()
+            elif self.display_mode == "time_gpu":
+                self.display_time()
+                self.display_metrics(devices=['gpu'])
+            elif self.display_mode == "alternate_time_with_seconds":
+                if self.cpt < self.cycle_duration:
+                    self.display_time_with_seconds()
+                else:
+                    self.display_metrics()
             else:
-                self.display_metrics()
-        else:
-            print(f"Unknown display mode: {self.display_mode}")
-        
-        self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
-        self.send_packets()
+                print(f"Unknown display mode: {self.display_mode}")
+            
+            self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
+            self.send_packets()
+            time.sleep(self.update_interval)
+
 
 
 def main(config_path):
     controller = Controller(config_path=config_path)
-    while True:
-        controller.update_and_display()
-        time.sleep(0.1)
+    controller.display()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
