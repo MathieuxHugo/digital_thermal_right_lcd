@@ -14,3 +14,6 @@ leds_indexes = {
     "gpu_usage": list(range(58, 42, -1)),
     "gpu_percent_led": 42,
 }
+
+
+NUMBER_OF_LEDS = 84

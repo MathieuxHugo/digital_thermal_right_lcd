@@ -1,6 +1,6 @@
 import numpy as np
 from metrics import Metrics
-from indexes import leds_indexes
+from config import leds_indexes, NUMBER_OF_LEDS
 import hid
 import time
 import datetime 
@@ -9,7 +9,6 @@ import os
 import sys
 
 
-NUMBER_OF_LEDS = 84
 digit_mask = np.array(
     [
         [1, 1, 1, 0, 1, 1, 1],  # 0
@@ -55,8 +54,7 @@ class Controller:
         self.metrics = Metrics()
         self.VENDOR_ID = 0x0416   
         self.PRODUCT_ID = 0x8001 
-        self.HEADER = 'dadbdcdd000000000000000000000000fc00'
-        self.UNKNOWN = '00ff'
+        self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
         try:
             self.dev = hid.Device(self.VENDOR_ID, self.PRODUCT_ID)
         except Exception as e:
@@ -89,7 +87,7 @@ class Controller:
     def send_packets(self):
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(NUMBER_OF_LEDS)])
 
-        packet0 = bytes.fromhex(self.HEADER+self.UNKNOWN+message[:88])
+        packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
         packets = message[88:]
         for i in range(0,4):
