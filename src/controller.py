@@ -84,7 +84,7 @@ class Controller:
         else:
             self.config_path = config_path
         self.cpt = 0  # For alternate_time cycling
-        self.cycle_duration = 100
+        self.cycle_duration = 50
         self.display_mode = None
         self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)  # Will be set in update()
         self.update()
@@ -180,7 +180,7 @@ class Controller:
     def update_and_display(self):
         self.update()
         if self.display_mode == "alternate_time":
-            if self.cpt < self.cycle_duration // 2:
+            if self.cpt < self.cycle_duration:
                 self.display_time()
                 self.display_metrics(devices=['gpu'])
             else:
@@ -190,10 +190,21 @@ class Controller:
             self.display_metrics(devices=["cpu", "gpu"])
         elif self.display_mode == "time":
             self.display_time_with_seconds()
+        elif self.display_mode == "time_cpu":
+            self.display_time(device="gpu")
+            self.display_metrics(devices=['cpu'])
+        elif self.display_mode == "time_gpu":
+            self.display_time()
+            self.display_metrics(devices=['gpu'])
+        elif self.display_mode == "alternate_time_with_seconds":
+            if self.cpt < self.cycle_duration:
+                self.display_time_with_seconds()
+            else:
+                self.display_metrics()
         else:
             print(f"Unknown display mode: {self.display_mode}")
         
-        self.cpt = (self.cpt + 1) % self.cycle_duration
+        self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
         self.send_packets()
 
 
