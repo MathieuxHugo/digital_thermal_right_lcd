@@ -157,7 +157,7 @@ class Controller:
                     start_color, end_color = color.split("-")
                     start_color = np.array([int(start_color[i:i+2], 16) for i in (0, 2, 4)])
                     end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
-                    factor = abs((self.cpt % self.cycle_duration) - (self.cycle_duration // 2)) / (self.cycle_duration // 2)
+                    factor = abs(self.cpt - self.cycle_duration) / (self.cycle_duration)
                     interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
                     interpolated_hex = ''.join(f"{c:02x}" for c in interpolated_color)
                     colors.append(interpolated_hex)

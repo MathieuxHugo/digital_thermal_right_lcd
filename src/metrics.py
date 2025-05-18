@@ -26,6 +26,7 @@ class Metrics:
             'cpu_usage': None,
             'gpu_usage': None
         }
+        self.metrics = {}
         try:
             device_count = pyamdgpuinfo.detect_gpus()
             if device_count > 0:
@@ -48,6 +49,7 @@ class Metrics:
                 try:
                     result = function()
                     if result is not None:
+                        self.metrics[metric] = int(result)
                         self.metrics_functions[metric] = function
                         break
                 except Exception as e:
