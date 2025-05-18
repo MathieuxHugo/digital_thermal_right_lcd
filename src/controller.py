@@ -1,5 +1,5 @@
 import numpy as np
-from metrics import get_system_metrics
+from metrics import Metrics
 import hid
 import time
 import datetime 
@@ -51,6 +51,7 @@ def get_number_array(temp, array_length=3, fill_value=-1):
 
 class Controller:
     def __init__(self, config_path=None):
+        self.metrics = Metrics()
         self.VENDOR_ID = 0x0416   
         self.PRODUCT_ID = 0x8001 
         self.HEADER = 'dadbdcdd000000000000000000000000fc00'
@@ -123,7 +124,7 @@ class Controller:
             raise Exception("The numbers displayed on the usage LCD must be less than 200")
 
     def display_metrics(self, devices=["cpu","gpu"]):
-        metrics = get_system_metrics()
+        metrics = self.metrics.get_metrics()
         for device in devices:
             self.set_leds(device+"_led", 1)
             self.set_temp(metrics[device+"_temp"], device=device)
@@ -205,7 +206,9 @@ def main(config_path):
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
+        print(f"Using config path: {config_path}")
     else:
+        print("No config path provided, using default.")
         config_path = None
     main(config_path)
 

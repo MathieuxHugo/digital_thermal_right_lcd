@@ -1,18 +1,91 @@
 import subprocess
 import re
 import psutil
-import pyamdgpuinfo
+try:
+    import pyamdgpuinfo
+except Exception as e:
+    print("pyamdgpuinfo cannot start : ",str(e))
 
 try:
-    device_count = pyamdgpuinfo.detect_gpus()
-    if device_count > 0:
-        gpu = pyamdgpuinfo.get_gpu(0)
-except:
-    gpu = None
+    import WinTmp
+except Exception as e:
+    print("WinTmp cannot start : ",str(e))
+    WinTmp = None
 
-def get_cpu_temp():
-    """Attempt to get CPU temperature using various methods."""
-    # Try psutil first (best cross-platform option)
+try:
+    import wmi
+except Exception as e:
+    print("wmi cannot start : ",str(e))
+    wmi = None
+
+class Metrics:
+    def __init__(self):
+        self.metrics_functions = {
+            'cpu_temp': None,
+            'gpu_temp': None,
+            'cpu_usage': None,
+            'gpu_usage': None
+        }
+        try:
+            device_count = pyamdgpuinfo.detect_gpus()
+            if device_count > 0:
+                self.gpu = pyamdgpuinfo.get_gpu(0)
+            else:
+                print(f"No AMD GPU detected.")
+                self.gpu = -1
+        except:
+            print("pyamdgpuinfo not installed. GPU temperature will not be available.")
+            self.gpu = None
+
+        candidates =  {
+            'cpu_temp': [get_cpu_temp_psutils,get_cpu_temp_linux,get_cpu_temp_windows_wmi,get_cpu_temp_windows_wintmp,get_cpu_temp_raspberry_pi],
+            'gpu_temp': [self.get_gpu_temp_amdgpuinfo, get_gpu_temp_nvidia,get_gpu_temp_wintemp,get_gpu_temp_nvidia],
+            'cpu_usage': [get_cpu_usage],
+            'gpu_usage': [self.get_gpu_usage_amd,get_gpu_usage_nvidia_smi(),get_gpu_usage_nvml]
+        }
+        for metric, functions in candidates.items():
+            for function in functions:
+                try:
+                    result = function()
+                    if result is not None:
+                        self.metrics_functions[metric] = function
+                        break
+                except Exception as e:
+                    continue
+            if self.metrics_functions[metric] is None:
+                print(f"Warning: No suitable function found for {metric}.")
+
+    def get_metrics(self):
+        metrics = {}
+        for metric, function in self.metrics_functions.items():
+            if function is not None:
+                try:
+                    result = function()
+                    if result is None:
+                        metrics[metric] = 0
+                    else:
+                        metrics[metric] = int(result)
+                except Exception as e:
+                    print(f"Error getting {metric}: {e}")
+        return metrics
+
+    def get_gpu_usage_amd(self):
+        try:
+            if self.gpu is None:
+                return None
+            else:
+                return int(self.gpu.query_load()*100)
+        except :
+            return None
+        
+    def get_gpu_temp_amdgpuinfo(self):
+        try:
+            return self.gpu.query_temperature()
+        except Exception as e:
+            print(f"Error getting AMD GPU temperature: {e}")
+            return None
+
+def get_cpu_temp_psutils():
     try:
         if hasattr(psutil, 'sensors_temperatures'):
             temps = psutil.sensors_temperatures()
@@ -21,57 +94,43 @@ def get_cpu_temp():
                 for key in ['coretemp', 'cpu_thermal', 'k10temp', 'acpitz']:
                     if key in temps and temps[key]:
                         return temps[key][0].current
-    except:
-        pass
-    
-    # Try platform-specific methods
-    import platform
-    system = platform.system()
-    
-    if system == 'Linux':
-        # Read from thermal zone
-        try:
-            with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
-                return float(f.read().strip()) / 1000.0
-        except:
-            pass
-        
-        # Try vcgencmd (for Raspberry Pi)
-        try:
-            output = subprocess.check_output(['vcgencmd', 'measure_temp']).decode()
-            return float(re.search(r'temp=(\d+\.\d+)', output).group(1))
-        except:
-            pass
-    
-    elif system == 'Windows':
-        # Try WinTmp
-        try:
-            import WinTmp
-            return WinTmp.CPU_Temp()
-        except:
-            pass
-        
-        # Try WMI
-        try:
-            import wmi
-            w = wmi.WMI(namespace="root\\wmi")
-            temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-            return (temperature_info.CurrentTemperature / 10.0) - 273.15
-        except:
-            pass
-    
-    
-    print(f"Warning: Could not retrieve CPU temp.")
-    return 0
+    except Exception:
+        return None
 
-def get_gpu_temp():
-    """Attempt to get GPU temperature using various methods."""
+def get_cpu_temp_linux():
+    try:
+        with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
+            return float(f.read().strip()) / 1000.0
+    except Exception:
+        return None
+def get_cpu_temp_windows_wmi(): 
+    try:
+        w = wmi.WMI(namespace="root\\wmi")
+        temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+        return (temperature_info.CurrentTemperature / 10.0) - 273.15
+    except Exception:
+        return None
+
+def get_cpu_temp_windows_wintmp():
+    try:
+        return WinTmp.CPU_Temp()
+    except Exception:
+        return None
+    
+def get_cpu_temp_raspberry_pi():
+    try:
+        output = subprocess.check_output(['vcgencmd', 'measure_temp']).decode()
+        return float(re.search(r'temp=(\d+\.\d+)', output).group(1))
+    except Exception:
+        return None
+
+def get_gpu_temp_nvidia():
     # Try NVIDIA GPU first
     try:
         # Try using pynvml library
         try:
             from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, \
-                              nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU, nvmlShutdown
+                            nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU, nvmlShutdown
             
             nvmlInit()
             device_count = nvmlDeviceGetCount()
@@ -88,25 +147,13 @@ def get_gpu_temp():
             output = subprocess.check_output(['nvidia-smi', '--query-gpu=temperature.gpu', '--format=csv,noheader']).decode()
             return float(output.strip().split('\n')[0])
     except:
-        pass
-    
-    # Try AMD GPU
+        return None
+
+def get_gpu_temp_wintemp():
     try:
-        return gpu.query_temperature()
-    except:
-        pass
-    
-    # Try Windows-specific methods
-    import platform
-    if platform.system() == 'Windows':
-        try:
-            import WinTmp
-            return WinTmp.GPU_Temp()
-        except:
-            pass
-    
-    print(f"Warning: Could not retrieve GPU temp.")
-    return 0
+        return WinTmp.GPU_Temp()
+    except Exception:
+        return None
 
 def get_cpu_usage():
     """Get CPU usage percentage."""
@@ -114,56 +161,30 @@ def get_cpu_usage():
         return psutil.cpu_percent(interval=None)
     except:
         print("Warning: Could not retrieve CPU usage.")
-        return 0
+        return None
 
-def get_gpu_usage():
-     # GPU usage implementation
-    try:
-        if gpu is None:
-            try:
-                # NVIDIA GPUs using pynvml
-                from pynvml import (nvmlInit, nvmlShutdown,
-                                nvmlDeviceGetHandleByIndex,
-                                nvmlDeviceGetUtilizationRates)
-                nvmlInit()
-                try:
-                    handle = nvmlDeviceGetHandleByIndex(0)
-                    utilization = nvmlDeviceGetUtilizationRates(handle)
-                    return int(utilization.gpu)
-                finally:
-                    nvmlShutdown()
-            except:
-                output = subprocess.check_output(
-                    ['nvidia-smi', '--query-gpu=utilization.gpu',
-                        '--format=csv,noheader']
-                ).decode().strip()
-                return int(output.split()[0])
-        else: 
-            return int(gpu.query_load()*100)
-    except:
-        print("Could not retrieve gpu usage.")
-        return 0
-
-def get_system_metrics():
-    """
-    Retrieve comprehensive system metrics including CPU/GPU temperatures and usage percentages.
+def get_gpu_usage_nvidia_smi():
+    try: 
+        output = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=utilization.gpu',
+                '--format=csv,noheader']
+        ).decode().strip()
+        return int(output.split()[0])
+    except Exception:
+        return None
     
-    Returns:
-        dict: Dictionary containing:
-            - cpu_temp: CPU temperature in Celsius (float or None)
-            - gpu_temp: GPU temperature in Celsius (float or None)
-            - cpu_usage: CPU utilization percentage (float)
-            - gpu_usage: GPU utilization percentage (float or None)
-    """
-    metrics = {
-        'cpu_temp': int(get_cpu_temp()),
-        'gpu_temp': int(get_gpu_temp()),
-        'cpu_usage': int(get_cpu_usage()),
-        'gpu_usage': int(get_gpu_usage())
-    }
-
-   
-
-    return metrics
-
-
+def get_gpu_usage_nvml():
+    try:
+        # NVIDIA GPUs using pynvml
+        from pynvml import (nvmlInit, nvmlShutdown,
+                        nvmlDeviceGetHandleByIndex,
+                        nvmlDeviceGetUtilizationRates)
+        nvmlInit()
+        try:
+            handle = nvmlDeviceGetHandleByIndex(0)
+            utilization = nvmlDeviceGetUtilizationRates(handle)
+            return int(utilization.gpu)
+        finally:
+            nvmlShutdown()
+    except:
+        return None
