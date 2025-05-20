@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import leds_indexes, NUMBER_OF_LEDS
+from config import leds_indexes, NUMBER_OF_LEDS, display_modes
 import numpy as np
 
 segmented_digit_layout = {# Position segments in a 7-segment layout
@@ -26,20 +26,22 @@ class LEDDisplayUI:
     def __init__(self, root, config_path="config.json"):
         self.root = root
         self.config_path = config_path
-        self.color_mode = "time"
         self.config = self.load_config()
         self.root.title("LED Display Layout")
         self.style = ttk.Style()
 
         self.leds_ui = [None] * NUMBER_OF_LEDS
+
+        display_frame = ttk.Frame(root, padding=(10, 10))
+        display_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.create_color_mode(display_frame)
+        self.create_display_mode(display_frame)
         # Create frames for CPU and GPU
-        self.cpu_frame = self.create_device_frame(root, "cpu", 0)
-        self.gpu_frame = self.create_device_frame(root, "gpu", 1)
+        self.cpu_frame = self.create_device_frame(root, "cpu", 1)
+        self.gpu_frame = self.create_device_frame(root, "gpu", 2)
 
         # Add controls for group selection and color change
-        self.controls_frame = ttk.LabelFrame(root, text="Controls", padding=(10, 10))
-        self.controls_frame.grid(row=2, column=0, columnspan=2, pady=10)
-        self.create_controls()
+        self.create_controls(root)
 
     def load_config(self):
         try:
@@ -56,18 +58,24 @@ class LEDDisplayUI:
             return leds_indexes[led_key][index]
 
     def get_color(self, led_key, index=None):
-        return f"#{np.array(self.config[self.color_mode]["colors"])[self.get_index(led_key, index)]}"
+        return f"#{np.array(self.config[self.color_mode.get()]["colors"])[self.get_index(led_key, index)]}"
     
     def set_color(self, led_index, color):
         self.set_ui_color(led_index, color)
         if self.config:
-            colors = np.array(self.config[self.color_mode]["colors"])
+            colors = np.array(self.config[self.color_mode.get()]["colors"])
             colors[led_index] = color.lstrip("#")
-            self.config[self.color_mode]["colors"] = colors.tolist()
-            with open(self.config_path, 'w') as f:
-                json.dump(self.config, f, indent=4)
+            self.config[self.color_mode.get()]["colors"] = colors.tolist()
+            self.write_config()
         else:
             print("Config not loaded. Cannot set color.")
+
+    def write_config(self):
+        try:
+            with open(self.config_path, 'w') as f:
+                json.dump(self.config, f, indent=4)
+        except Exception as e:
+            print(f"Error writing config: {e}")
 
     def set_ui_color(self, index, color):
         if isinstance(self.leds_ui[index],(ttk.Label)):
@@ -198,11 +206,50 @@ class LEDDisplayUI:
                 )
                 index+=1
 
-    def create_controls(self):
+    def create_display_mode(self, root, row=0, column=0):
+        display_mode_frame = ttk.LabelFrame(root, text="Choose display mode :", padding=(10, 10))
+        display_mode_frame.grid(row=row, column=column, pady=10)
+        self.display_mode = tk.StringVar(value=self.config["display_mode"])
+        group_dropdown = ttk.Combobox(
+            display_mode_frame, textvariable=self.display_mode, state="readonly"
+        )
+        group_dropdown["values"] = display_modes
+        group_dropdown.grid(row=0, column=0, padx=5, pady=5)
+        group_dropdown.bind(
+            "<<ComboboxSelected>>",
+            lambda event: self.change_display_mode(),
+        )
+
+    def create_color_mode(self, root, row=0, column=1):
+        color_mode_frame = ttk.LabelFrame(root, text="Change the color of the :", padding=(10, 10))
+        color_mode_frame.grid(row=row, column=column, pady=10)        
+        self.color_mode = tk.StringVar(value="time")
+        group_dropdown = ttk.Combobox(
+            color_mode_frame, textvariable=self.color_mode, state="readonly"
+        )
+        group_dropdown["values"] = ["time", "metrics"]
+        group_dropdown.grid(row=0, column=0, padx=5, pady=5)
+        group_dropdown.bind(
+            "<<ComboboxSelected>>",
+            lambda event: self.change_color_mode(),
+        )
+
+    def change_color_mode(self):
+        colors = np.array(self.config[self.color_mode.get()]["colors"])
+        for index in range(NUMBER_OF_LEDS):
+            self.set_ui_color(color="#"+colors[index], index=index)
+
+    def change_display_mode(self):
+        self.config["display_mode"] = self.display_mode
+        self.write_config()
+
+    def create_controls(self, root, row=3):
+        controls_frame = ttk.LabelFrame(root, text="Group color :", padding=(10, 10))
+        controls_frame.grid(row=row, column=0, columnspan=2, pady=10)
         # Dropdown for group selection
         self.group_var = tk.StringVar(value="ALL")
         group_dropdown = ttk.Combobox(
-            self.controls_frame, textvariable=self.group_var, state="readonly"
+            controls_frame, textvariable=self.group_var, state="readonly"
         )
         group_dropdown["values"] = [led_key.upper() for led_key in leds_indexes]
         
@@ -210,7 +257,7 @@ class LEDDisplayUI:
 
         # Button to change color of selected group
         change_color_button = ttk.Button(
-            self.controls_frame,
+            controls_frame,
             text="Change Group Color",
             command=self.change_group_color,
         )
