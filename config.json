@@ -1,5 +1,5 @@
 {
-    "display_mode": "alternate_time",
+    "display_mode": "debug_ui",
     "metrics": {
         "colors": [
             "00ff00-ff0000-cpu_temp",
@@ -106,14 +106,14 @@
             "ff0000",
             "ff0000",
             "ff0000",
+            "d9d900",
             "ff0000",
             "ff0000",
             "ff0000",
             "ff0000",
             "ff0000",
             "ff0000",
-            "ff0000",
-            "ff0000",
+            "00d9d9",
             "ff0000",
             "ff0000",
             "ff0000",

@@ -240,7 +240,7 @@ class LEDDisplayUI:
             self.set_ui_color(color="#"+colors[index], index=index)
 
     def change_display_mode(self):
-        self.config["display_mode"] = self.display_mode
+        self.config["display_mode"] = self.display_mode.get()
         self.write_config()
 
     def create_controls(self, root, row=3):
@@ -263,24 +263,84 @@ class LEDDisplayUI:
         )
         change_color_button.grid(row=0, column=1, padx=5, pady=5)
 
+    def custom_color_popup(self, initial_color="#ffffff"):
+        popup = tk.Toplevel(self.root)
+        popup.title("Choose Color Mode")
+
+        mode_var = tk.StringVar(value="color")
+        tk.Label(popup, text="Select Mode:").grid(row=0, column=0, padx=5, pady=5)
+        mode_dropdown = ttk.Combobox(popup, textvariable=mode_var, state="readonly")
+        mode_dropdown["values"] = ["color", "color gradient", "metrics dependent"]
+        mode_dropdown.grid(row=0, column=1, padx=5, pady=5)
+
+        color1_var = tk.StringVar(value=initial_color)
+        color2_var = tk.StringVar(value=initial_color)
+        metric_var = tk.StringVar(value="cpu_usage")
+
+        def update_ui(*args):
+            if mode_var.get() == "color":
+                color2_entry.grid_remove()
+                metric_dropdown.grid_remove()
+            elif mode_var.get() == "color gradient":
+                color2_entry.grid()
+                metric_dropdown.grid_remove()
+            elif mode_var.get() == "metrics dependent":
+                color2_entry.grid()
+                metric_dropdown.grid()
+
+        mode_var.trace("w", update_ui)
+
+        tk.Label(popup, text="Color 1:").grid(row=1, column=0, padx=5, pady=5)
+        color1_entry = tk.Entry(popup, textvariable=color1_var)
+        color1_entry.grid(row=1, column=1, padx=5, pady=5)
+        tk.Button(popup, text="Choose", command=lambda: color1_var.set(colorchooser.askcolor()[1])).grid(row=1, column=2, padx=5, pady=5)
+
+        tk.Label(popup, text="Color 2:").grid(row=2, column=0, padx=5, pady=5)
+        color2_entry = tk.Entry(popup, textvariable=color2_var)
+        color2_entry.grid(row=2, column=1, padx=5, pady=5)
+        tk.Button(popup, text="Choose", command=lambda: color2_var.set(colorchooser.askcolor()[1])).grid(row=2, column=2, padx=5, pady=5)
+
+        tk.Label(popup, text="Metric:").grid(row=3, column=0, padx=5, pady=5)
+        metric_dropdown = ttk.Combobox(popup, textvariable=metric_var, state="readonly")
+        metric_dropdown["values"] = ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]
+        metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
+
+        def on_submit():
+            if mode_var.get() == "color":
+                result = color1_var.get()
+            elif mode_var.get() == "color gradient":
+                result = f"Gradient: {color1_var.get()} to {color2_var.get()}"
+            elif mode_var.get() == "metrics dependent":
+                result = f"Metric: {metric_var.get()} ({color1_var.get()} to {color2_var.get()})"
+            popup.result = result
+            popup.destroy()
+
+        tk.Button(popup, text="Submit", command=on_submit).grid(row=4, column=0, columnspan=3, pady=10)
+
+        popup.transient(self.root)
+        popup.grab_set()
+        self.root.wait_window(popup)
+
+        return getattr(popup, "result", None)
+
     def change_group_color(self):
         group_name = self.group_var.get().lower()
         if group_name in leds_indexes:
-            color = colorchooser.askcolor(title="Choose Group Color", color=self.get_color(group_name,index=0))[1]
-            if color:
+            result = self.custom_color_popup(initial_color=self.get_color(group_name, index=0))
+            if result:
                 if isinstance(leds_indexes[group_name], int):
-                    self.set_color(leds_indexes[group_name], color)
+                    self.set_color(leds_indexes[group_name], result)
                 else:
                     for index in leds_indexes[group_name]:
-                        self.set_color(index, color)
+                        self.set_color(index, result)
         else:
             print("Invalid group selected.")
 
     def change_led_color(self, led_key, index=None):
         led_index = self.get_index(led_key, index)
-        color = colorchooser.askcolor(title="Choose LED Color", color=self.get_color(led_key, index))[1]
-        if color:
-            self.set_color(led_index, color)
+        result = self.custom_color_popup(initial_color=self.get_color(led_key, index))
+        if result:
+            self.set_color(led_index, result)
             
 
 
