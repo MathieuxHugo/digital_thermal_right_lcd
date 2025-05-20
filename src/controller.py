@@ -232,6 +232,9 @@ class Controller:
                     self.display_time_with_seconds()
                 else:
                     self.display_metrics()
+            elif self.display_mode == "debug_ui":
+                self.colors = self.time_colors
+                self.leds[:] = 1
             else:
                 print(f"Unknown display mode: {self.display_mode}")
             

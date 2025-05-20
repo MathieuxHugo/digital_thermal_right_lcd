@@ -1,7 +1,8 @@
 leds_indexes = {
+    "all" : list(range(0, 84)),
     "cpu" : list(range(0, 42)),
     "gpu" : list(range(42, 84)),
-    "cpu_led": list(range(0, 2)),
+    "cpu_led": [0, 1],
     "cpu_temp": list(range(2, 23)),
     "cpu_celsius": 23,
     "cpu_fahrenheit": 24,
@@ -15,5 +16,14 @@ leds_indexes = {
     "gpu_percent_led": 42,
 }
 
+display_modes = [
+    "alternate_time",
+    "metrics",
+    "time",
+    "time_cpu",
+    "time_gpu",
+    "alternate_time_with_seconds",
+    "debug_ui",
+]
 
 NUMBER_OF_LEDS = 84

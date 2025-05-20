@@ -7,19 +7,19 @@ import numpy as np
 
 segmented_digit_layout = {# Position segments in a 7-segment layout
     "top_left":
-        {"row":1, "column":0, "padx":2},
+        {"row":1, "column":0, "padx":2, "pady":0, "orientation": "Vertical"},
     "top":
-        {"row":0, "column":1, "pady":2},
+        {"row":0, "column":1, "pady":2, "padx":0,  "orientation": "Horizontal"},
     "top_right":
-        {"row":1, "column":2, "padx":2},
+        {"row":1, "column":2, "padx":2, "pady":0, "orientation": "Vertical"},
     "middle":
-        {"row":2, "column":1, "pady":2},
+        {"row":2, "column":1, "pady":2, "padx":0, "orientation": "Horizontal"},
     "bottom_left":
-        {"row":3, "column":0, "padx":2},
+        {"row":3, "column":0, "padx":2, "pady":0, "orientation": "Vertical"},
     "bottom":
-        {"row":4, "column":1, "pady":2},
+        {"row":4, "column":1, "pady":2, "padx":0, "orientation": "Horizontal"},
     "bottom_right":
-        {"row":3, "column":2, "padx":2}
+        {"row":3, "column":2, "padx":2, "pady":0, "orientation": "Vertical"},
 }
 
 class LEDDisplayUI:
@@ -30,9 +30,10 @@ class LEDDisplayUI:
         self.config = self.load_config()
         self.root.title("LED Display Layout")
         self.style = ttk.Style()
+
+        self.leds_ui = [None] * NUMBER_OF_LEDS
         # Create frames for CPU and GPU
         self.cpu_frame = self.create_device_frame(root, "cpu", 0)
-
         self.gpu_frame = self.create_device_frame(root, "gpu", 1)
 
         # Add controls for group selection and color change
@@ -48,185 +49,163 @@ class LEDDisplayUI:
             print(f"Error loading config: {e}")
             return None
         
-    def get_color(self, led_key, index=None):
-        if index is None:
-            return f"#{np.array(self.config[self.color_mode]["colors"])[leds_indexes[led_key]]}"
+    def get_index(self, led_key, index=None):
+        if index is None or isinstance(leds_indexes[led_key],int):
+            return leds_indexes[led_key]
         else:
-            return f"#{np.array(self.config[self.color_mode]["colors"])[leds_indexes[led_key]][index]}"
+            return leds_indexes[led_key][index]
+
+    def get_color(self, led_key, index=None):
+        return f"#{np.array(self.config[self.color_mode]["colors"])[self.get_index(led_key, index)]}"
     
-    def set_color(self, led_key, color, index=None):
+    def set_color(self, led_index, color):
+        self.set_ui_color(led_index, color)
         if self.config:
             colors = np.array(self.config[self.color_mode]["colors"])
-            if index is None:
-                colors[leds_indexes[led_key]] = color
-            else:
-                colors[leds_indexes[led_key][index]] = color
+            colors[led_index] = color.lstrip("#")
             self.config[self.color_mode]["colors"] = colors.tolist()
             with open(self.config_path, 'w') as f:
                 json.dump(self.config, f, indent=4)
         else:
             print("Config not loaded. Cannot set color.")
 
+    def set_ui_color(self, index, color):
+        if isinstance(self.leds_ui[index],(ttk.Label)):
+            self.leds_ui[index].config(foreground=color)
+        else:
+            self.leds_ui[index].config(background=color)
 
     def create_device_frame(self, root, device_name, row):
         frame = ttk.LabelFrame(root, text=device_name.upper(), padding=(10, 10))
         frame.grid(row=row, column=0, padx=10, pady=10)
 
+        device_led_frame = ttk.Frame(frame)
+        device_led_frame.grid(row=0, column=0, padx=0, pady=0)
+        self.create_label(device_led_frame, device_name+"_led", device_name.upper()[0], 0, 0, index=int(device_name=="cpu"))
+        self.create_label(device_led_frame, device_name+"_led", device_name.upper()[1:], 0, 1, index=int(device_name!="cpu"))
+
         temp_frame = ttk.LabelFrame(frame, text=device_name.upper()+" temp", padding=(10, 10))
-        temp_frame.grid(row=0, column=0, padx=10, pady=10)
+        temp_frame.grid(row=1, column=0, padx=10, pady=10)
 
         # Add temperature unit selection
         unit_frame = ttk.Frame(frame)
-        unit_frame.grid(row=0, column=2, padx=5, pady=5)
-        
-        # Create variables to store the selected unit and style for labels
-        self.temp_unit_var = getattr(self, f"{device_name.lower()}_temp_unit_var", tk.StringVar(value="C"))
-        unit_style = {"font": ("Arial", 10), "cursor": "hand2", "padding": 5}
+        unit_frame.grid(row=1, column=1, padx=5, pady=5)
         
         # Create clickable labels for °C and °F
-        celsius_label = ttk.Label(unit_frame, text="°C", **unit_style)
-        celsius_label.pack(side=tk.LEFT, padx=2)
-        celsius_label.config(foreground=self.get_color(device_name+"_celsius"))
-        celsius_label.bind("<Button-1>", lambda e: self.temp_unit_var.set("C"))
-        fahrenheit_label = ttk.Label(unit_frame, text="°F", **unit_style)
-        fahrenheit_label.pack(side=tk.LEFT, padx=2)
-        fahrenheit_label.config(foreground=self.get_color(device_name+"_fahrenheit"))
-        fahrenheit_label.bind("<Button-1>", lambda e: self.temp_unit_var.set("F"))
+        self.create_label(unit_frame, device_name+"_celsius", "°C", 0, 0)
+        self.create_label(unit_frame, device_name+"_fahrenheit", "°F", 1, 0)
 
         usage_frame = ttk.LabelFrame(frame, text=device_name.upper()+" usage", padding=(10, 10))
-        usage_frame.grid(row=0, column=1, padx=10, pady=10)
+        usage_frame.grid(row=1, column=2, padx=10, pady=10)
 
         # Create LED layout for CPU and GPU
-        self.cpu_temp_leds = self.create_segmented_digit_layout(temp_frame, device_name+"_temp")
-        self.cpu_usage_leds = self.create_segmented_digit_layout(usage_frame, device_name+"_usage", number_of_digits=2)
+        self.create_segmented_digit_layout(temp_frame, device_name+"_temp")
+        self.create_usage_frame(usage_frame, device_name+"_usage")
+
+        
+        self.create_label(frame, device_name+"_percent_led", "%", 1, 3)
         return frame
     
+
+    def create_label(self, parent_frame, led_key, text, row, column, index=None):
+        unit_style = {"font": ("Arial", 20), "cursor": "hand2"}
+        label = ttk.Label(parent_frame, text=text, **unit_style)
+        label.grid(row=row, column=column, padx=0, pady=5)
+        label.config(foreground=self.get_color(led_key,index))
+        label.bind(
+            "<Button-1>",
+            lambda event,
+            led_key=led_key, led_index=index: self.change_led_color(
+                led_key, index=led_index
+            ),
+        )
+        if index is not None:
+            self.leds_ui[leds_indexes[led_key][index]] = label
+        else:
+            self.leds_ui[leds_indexes[led_key]] = label
+
     def create_usage_frame(self, frame, label):
+        index = 0
         one_frame = ttk.Frame(frame, padding=(5, 5))
         one_frame.grid(row=1, column=0, padx=5, pady=5)
-        for one_index in range(2):
-            segment = tk.Canvas(
-                        frame,
-                        width=5,
-                        height=20,
-                        bg="white",
-                        highlightthickness=0,
-                    )
-            segment.grid(
+        for one_index in range(2,0,-1):
+            self.create_segment(
+                one_frame,
+                label,
+                led_index=index,
                 row=one_index,
                 column=0,
-                padx=0,
-                pady=0,
+                pady=4,
             )
+            index+=1
         
-        index = 2
-        for digit_index in range(2):
-            digit_frame = ttk.Frame(frame, padding=(5, 5))
-            digit_frame.grid(row=1, column=digit_index+1, padx=5, pady=5)
+        digit_frame = ttk.Frame(frame, padding=(5, 5))
+        digit_frame.grid(row=1, column=1, padx=0, pady=0)
+        self.create_segmented_digit_layout(digit_frame, label, number_of_digits=2, index=index)
 
-            segments = {}
-            # Create 7 segments for the digit
-            for segment_name in segmented_digit_layout.keys():
-                if ("right" in segment_name) or ("left" in segment_name):  # Vertical segments
-                    segment = tk.Canvas(
-                        digit_frame,
-                        width=5,
-                        height=20,
-                        bg="white",
-                        highlightthickness=0,
-                    )
-                else:  # Horizontal segments
-                    segment = tk.Canvas(
-                        digit_frame,
-                        width=20,
-                        height=5,
-                        bg="white",
-                        highlightthickness=0,
-                    )
-                segments[f"{segment_name}"] = segment
-                segment.grid(
-                    row=segmented_digit_layout[segment_name]["row"],
-                    column=segmented_digit_layout[segment_name]["column"],
-                    padx=segmented_digit_layout[segment_name].get("padx", 0),
-                    pady=segmented_digit_layout[segment_name].get("pady", 0),
-                )
-                segment.config(background=self.get_color(label,index))
 
-                # Add click event to change color
-                segment.bind(
-                    "<Button-1>",
-                    lambda event,
-                    led_key=label, led_index=index: self.change_led_color(
-                        led_key, led_index
-                    ),
-                )
-                index+=1
+    def create_segment(self, parent_frame, label, led_index, row, column, orientation="Vertical", pady=0, padx=0):
+        if orientation == "Vertical":
+            segment = tk.Canvas(
+                parent_frame,
+                width=5,
+                height=20,
+                bg=self.get_color(label,led_index),
+                highlightthickness=0,
+            )
+        else:
+            segment = tk.Canvas(
+                parent_frame,
+                width=20,
+                height=5,
+                bg=self.get_color(label,led_index),
+                highlightthickness=0,
+            )
+        segment.grid(
+            row=row,
+            column=column,
+            padx=padx,
+            pady=pady,
+        )
+        segment.bind(
+            "<Button-1>",
+            lambda event,
+            led_key=label, led_index=led_index: self.change_led_color(
+                led_key, index=led_index
+            ),
+        )
+        if led_index is not None:
+            self.leds_ui[leds_indexes[label][led_index]] = segment
+        else:
+            self.leds_ui[leds_indexes[label]] = segment
 
-    def create_segmented_digit_layout(self, frame, label, number_of_digits=3):
-        leds = {}
-        index = 0
-        
-        # Create 3 digits, each with 7 segments
+    def create_segmented_digit_layout(self, frame, label, number_of_digits=3, index = 0):
         for digit_index in range(number_of_digits):
             digit_frame = ttk.Frame(frame, padding=(5, 5))
             digit_frame.grid(row=1, column=digit_index, padx=5, pady=5)
 
-            segments = {}
             # Create 7 segments for the digit
             for segment_name in segmented_digit_layout.keys():
-                if ("right" in segment_name) or ("left" in segment_name):  # Vertical segments
-                    segment = tk.Canvas(
-                        digit_frame,
-                        width=5,
-                        height=20,
-                        bg="white",
-                        highlightthickness=0,
-                    )
-                else:  # Horizontal segments
-                    segment = tk.Canvas(
-                        digit_frame,
-                        width=20,
-                        height=5,
-                        bg="white",
-                        highlightthickness=0,
-                    )
-                segments[f"{segment_name}"] = segment
-                segment.grid(
+                self.create_segment(
+                    digit_frame,
+                    label,
+                    led_index=index,
                     row=segmented_digit_layout[segment_name]["row"],
                     column=segmented_digit_layout[segment_name]["column"],
-                    padx=segmented_digit_layout[segment_name].get("padx", 0),
-                    pady=segmented_digit_layout[segment_name].get("pady", 0),
-                )
-                segment.config(background=self.get_color(label,index))
-
-                # Add click event to change color
-                segment.bind(
-                    "<Button-1>",
-                    lambda event,
-                    led_key=label, led_index=index: self.change_led_color(
-                        led_key, led_index
-                    ),
+                    orientation=segmented_digit_layout[segment_name]["orientation"],
+                    pady=segmented_digit_layout[segment_name]["pady"],
+                    padx=segmented_digit_layout[segment_name]["padx"],
                 )
                 index+=1
 
-            leds[f"{digit_index}"] = segments
-
-        return leds
-
     def create_controls(self):
         # Dropdown for group selection
-        self.group_var = tk.StringVar(value="Select Group")
+        self.group_var = tk.StringVar(value="ALL")
         group_dropdown = ttk.Combobox(
             self.controls_frame, textvariable=self.group_var, state="readonly"
         )
-        group_dropdown["values"] = [
-            "All CPU LEDs",
-            "All GPU LEDs",
-            "CPU Temp",
-            "GPU Temp",
-            "CPU Usage",
-            "GPU Usage",
-        ]
+        group_dropdown["values"] = [led_key.upper() for led_key in leds_indexes]
+        
         group_dropdown.grid(row=0, column=0, padx=5, pady=5)
 
         # Button to change color of selected group
@@ -237,35 +216,26 @@ class LEDDisplayUI:
         )
         change_color_button.grid(row=0, column=1, padx=5, pady=5)
 
-    def change_led_color(self, led_key, index=None):
-        color = colorchooser.askcolor(title="Choose LED Color")[1]
-        if color:
-            self.set_color(led_key, color.replace("#", ""), index)
-
     def change_group_color(self):
-        color = colorchooser.askcolor(title="Choose Group Color")[1]
-        if not color:
-            return
+        group_name = self.group_var.get().lower()
+        if group_name in leds_indexes:
+            color = colorchooser.askcolor(title="Choose Group Color", color=self.get_color(group_name,index=0))[1]
+            if color:
+                if isinstance(leds_indexes[group_name], int):
+                    self.set_color(leds_indexes[group_name], color)
+                else:
+                    for index in leds_indexes[group_name]:
+                        self.set_color(index, color)
+        else:
+            print("Invalid group selected.")
 
-        group = self.group_var.get()
-        if group == "All CPU LEDs":
-            for led in self.cpu_leds.values():
-                led.config(bg=color)
-        elif group == "All GPU LEDs":
-            for led in self.gpu_leds.values():
-                led.config(bg=color)
-        elif group == "CPU Temp":
-            for key in ["temp_0", "temp_1", "temp_2"]:
-                self.cpu_leds[key].config(bg=color)
-        elif group == "GPU Temp":
-            for key in ["temp_0", "temp_1", "temp_2"]:
-                self.gpu_leds[key].config(bg=color)
-        elif group == "CPU Usage":
-            for key in ["usage_0", "usage_1", "usage_2"]:
-                self.cpu_leds[key].config(bg=color)
-        elif group == "GPU Usage":
-            for key in ["usage_0", "usage_1", "usage_2"]:
-                self.gpu_leds[key].config(bg=color)
+    def change_led_color(self, led_key, index=None):
+        led_index = self.get_index(led_key, index)
+        color = colorchooser.askcolor(title="Choose LED Color", color=self.get_color(led_key, index))[1]
+        if color:
+            self.set_color(led_index, color)
+            
+
 
 
 if __name__ == "__main__":
