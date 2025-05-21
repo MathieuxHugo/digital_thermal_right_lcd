@@ -4,7 +4,9 @@ import json
 import sys
 from config import leds_indexes, NUMBER_OF_LEDS, display_modes
 import numpy as np
-
+import threading
+import time
+from utils import interpolate_color
 segmented_digit_layout = {# Position segments in a 7-segment layout
     "top_left":
         {"row":1, "column":0, "padx":2, "pady":0, "orientation": "Vertical"},
@@ -42,6 +44,29 @@ class LEDDisplayUI:
 
         # Add controls for group selection and color change
         self.create_controls(root)
+        self.update_interval = self.config["update_interval"]
+        self.cycle_duration = self.config["cycle_duration"]
+        self.start_time = time.time()
+        threading.Thread(target=self.update_ui_loop, daemon=True).start()
+
+    def update_ui_loop(self):
+        while True:
+            current_time = time.time()
+            elapsed_time = (current_time - self.start_time)%(self.cycle_duration*2)
+            colors = np.array(self.config[self.color_mode.get()]["colors"])
+            for index in range(NUMBER_OF_LEDS):
+                color = colors[index]
+                if "-" in color:
+                    split_color = color.split("-")
+                    if len(split_color) == 3:
+                        start_color, end_color, metric = split_color
+                        factor=elapsed_time/(self.cycle_duration*2)
+                    else:
+                        start_color, end_color = split_color
+                        factor=abs(elapsed_time-self.cycle_duration)/(self.cycle_duration)
+                    color = interpolate_color(start_color=start_color, end_color=end_color, factor=factor)
+                self.set_ui_color(index, color="#"+color)
+            time.sleep(self.update_interval)
 
     def load_config(self):
         try:
@@ -61,12 +86,8 @@ class LEDDisplayUI:
         return f"#{np.array(self.config[self.color_mode.get()]["colors"])[self.get_index(led_key, index)]}"
     
     def set_color(self, led_index, color):
-        self.set_ui_color(led_index, color)
         if self.config:
-            colors = np.array(self.config[self.color_mode.get()]["colors"])
-            colors[led_index] = color.lstrip("#")
-            self.config[self.color_mode.get()]["colors"] = colors.tolist()
-            self.write_config()
+            self.config[self.color_mode.get()]["colors"][led_index] = color
         else:
             print("Config not loaded. Cannot set color.")
 
@@ -119,7 +140,7 @@ class LEDDisplayUI:
         unit_style = {"font": ("Arial", 20), "cursor": "hand2"}
         label = ttk.Label(parent_frame, text=text, **unit_style)
         label.grid(row=row, column=column, padx=0, pady=5)
-        label.config(foreground=self.get_color(led_key,index))
+        label.config(foreground=self.get_color(led_key,index).split("-")[0])
         label.bind(
             "<Button-1>",
             lambda event,
@@ -158,7 +179,7 @@ class LEDDisplayUI:
                 parent_frame,
                 width=5,
                 height=20,
-                bg=self.get_color(label,led_index),
+                bg=self.get_color(label,led_index).split("-")[0],
                 highlightthickness=0,
             )
         else:
@@ -166,7 +187,7 @@ class LEDDisplayUI:
                 parent_frame,
                 width=20,
                 height=5,
-                bg=self.get_color(label,led_index),
+                bg=self.get_color(label,led_index).split("-")[0],
                 highlightthickness=0,
             )
         segment.grid(
@@ -229,15 +250,15 @@ class LEDDisplayUI:
         )
         group_dropdown["values"] = ["time", "metrics"]
         group_dropdown.grid(row=0, column=0, padx=5, pady=5)
-        group_dropdown.bind(
-            "<<ComboboxSelected>>",
-            lambda event: self.change_color_mode(),
-        )
+    #     group_dropdown.bind(
+    #         "<<ComboboxSelected>>",
+    #         lambda event: self.change_color_mode(),
+    #     )
 
-    def change_color_mode(self):
-        colors = np.array(self.config[self.color_mode.get()]["colors"])
-        for index in range(NUMBER_OF_LEDS):
-            self.set_ui_color(color="#"+colors[index], index=index)
+    # def change_color_mode(self):
+    #     colors = np.array(self.config[self.color_mode.get()]["colors"])
+    #     for index in range(NUMBER_OF_LEDS):
+    #         self.set_ui_color(color="#"+colors[index], index=index)
 
     def change_display_mode(self):
         self.config["display_mode"] = self.display_mode.get()
@@ -273,9 +294,21 @@ class LEDDisplayUI:
         mode_dropdown["values"] = ["color", "color gradient", "metrics dependent"]
         mode_dropdown.grid(row=0, column=1, padx=5, pady=5)
 
-        color1_var = tk.StringVar(value=initial_color)
-        color2_var = tk.StringVar(value=initial_color)
-        metric_var = tk.StringVar(value="cpu_usage")
+        metric = "cpu_usage"
+        if "-" in initial_color:
+            split_color = initial_color.split("-")
+            if len(split_color) == 3:
+                start_color, end_color, metric = split_color
+            else:
+                start_color, end_color = split_color
+        else:
+            start_color = initial_color
+            end_color = initial_color
+            
+
+        color1_var = tk.StringVar(value=start_color)
+        color2_var = tk.StringVar(value=end_color)
+        metric_var = tk.StringVar(value=metric)
 
         def update_ui(*args):
             if mode_var.get() == "color":
@@ -306,18 +339,21 @@ class LEDDisplayUI:
         metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
 
         def on_submit():
+            color1 = color1_var.get().replace("#", "")
+            color2 = color2_var.get().replace("#", "")
             if mode_var.get() == "color":
-                result = color1_var.get()
+                result = color1
             elif mode_var.get() == "color gradient":
-                result = f"Gradient: {color1_var.get()} to {color2_var.get()}"
+                result = f"{color1}-{color2}"
             elif mode_var.get() == "metrics dependent":
-                result = f"Metric: {metric_var.get()} ({color1_var.get()} to {color2_var.get()})"
+                result = f"{color1}-{color2}-{metric_var.get()}"
             popup.result = result
             popup.destroy()
 
         tk.Button(popup, text="Submit", command=on_submit).grid(row=4, column=0, columnspan=3, pady=10)
 
         popup.transient(self.root)
+        self.root.update_idletasks()  # Ensure the popup is fully initialized
         popup.grab_set()
         self.root.wait_window(popup)
 
@@ -333,6 +369,7 @@ class LEDDisplayUI:
                 else:
                     for index in leds_indexes[group_name]:
                         self.set_color(index, result)
+            self.write_config()
         else:
             print("Invalid group selected.")
 
@@ -341,6 +378,7 @@ class LEDDisplayUI:
         result = self.custom_color_popup(initial_color=self.get_color(led_key, index))
         if result:
             self.set_color(led_index, result)
+            self.write_config()
             
 
 
