@@ -307,31 +307,44 @@ class LEDDisplayUI:
 
         def update_ui(*args):
             if mode_var.get() == "color":
+                color2_label.grid_remove()
                 color2_entry.grid_remove()
+                color2_button.grid_remove()
                 metric_dropdown.grid_remove()
+                metric_label.grid_remove()
             elif mode_var.get() == "color gradient":
+                color2_label.grid()
                 color2_entry.grid()
+                color2_button.grid()
                 metric_dropdown.grid_remove()
+                metric_label.grid_remove()
             elif mode_var.get() == "metrics dependent":
+                color2_label.grid()
                 color2_entry.grid()
+                color2_button.grid()
                 metric_dropdown.grid()
+                metric_label.grid()
+
+        mode_var.trace("w", update_ui)
 
         tk.Label(popup, text="Color 1:").grid(row=1, column=0, padx=5, pady=5)
         color1_entry = tk.Entry(popup, textvariable=color1_var)
         color1_entry.grid(row=1, column=1, padx=5, pady=5)
         tk.Button(popup, text="Choose", command=lambda: color1_var.set(colorchooser.askcolor()[1])).grid(row=1, column=2, padx=5, pady=5)
 
-        tk.Label(popup, text="Color 2:").grid(row=2, column=0, padx=5, pady=5)
+        color2_label = tk.Label(popup, text="Color 2:")
+        color2_label.grid(row=2, column=0, padx=5, pady=5)
         color2_entry = tk.Entry(popup, textvariable=color2_var)
         color2_entry.grid(row=2, column=1, padx=5, pady=5)
-        tk.Button(popup, text="Choose", command=lambda: color2_var.set(colorchooser.askcolor()[1])).grid(row=2, column=2, padx=5, pady=5)
+        color2_button = tk.Button(popup, text="Choose", command=lambda: color2_var.set(colorchooser.askcolor()[1]))
+        color2_button.grid(row=2, column=2, padx=5, pady=5)
 
-        tk.Label(popup, text="Metric:").grid(row=3, column=0, padx=5, pady=5)
+        metric_label = tk.Label(popup, text="Metric:")
+        metric_label.grid(row=3, column=0, padx=5, pady=5)
         metric_dropdown = ttk.Combobox(popup, textvariable=metric_var, state="readonly")
         metric_dropdown["values"] = ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]
         metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
 
-        mode_var.trace("w", update_ui)
         update_ui()
         
         def on_submit():
