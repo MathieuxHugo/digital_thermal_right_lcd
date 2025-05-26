@@ -250,18 +250,13 @@ class LEDDisplayUI:
         )
         group_dropdown["values"] = ["time", "metrics"]
         group_dropdown.grid(row=0, column=0, padx=5, pady=5)
-    #     group_dropdown.bind(
-    #         "<<ComboboxSelected>>",
-    #         lambda event: self.change_color_mode(),
-    #     )
-
-    # def change_color_mode(self):
-    #     colors = np.array(self.config[self.color_mode.get()]["colors"])
-    #     for index in range(NUMBER_OF_LEDS):
-    #         self.set_ui_color(color="#"+colors[index], index=index)
 
     def change_display_mode(self):
         self.config["display_mode"] = self.display_mode.get()
+        if self.display_mode.get() == "time":
+            self.color_mode.set("time")
+        elif self.display_mode.get() == "metrics":
+            self.color_mode.set("metrics")
         self.write_config()
 
     def create_controls(self, root, row=3):
@@ -321,8 +316,6 @@ class LEDDisplayUI:
                 color2_entry.grid()
                 metric_dropdown.grid()
 
-        mode_var.trace("w", update_ui)
-
         tk.Label(popup, text="Color 1:").grid(row=1, column=0, padx=5, pady=5)
         color1_entry = tk.Entry(popup, textvariable=color1_var)
         color1_entry.grid(row=1, column=1, padx=5, pady=5)
@@ -338,6 +331,9 @@ class LEDDisplayUI:
         metric_dropdown["values"] = ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]
         metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
 
+        mode_var.trace("w", update_ui)
+        update_ui()
+        
         def on_submit():
             color1 = color1_var.get().replace("#", "")
             color2 = color2_var.get().replace("#", "")
