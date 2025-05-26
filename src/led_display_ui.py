@@ -286,7 +286,7 @@ class LEDDisplayUI:
         mode_var = tk.StringVar(value="color")
         tk.Label(popup, text="Select Mode:").grid(row=0, column=0, padx=5, pady=5)
         mode_dropdown = ttk.Combobox(popup, textvariable=mode_var, state="readonly")
-        mode_dropdown["values"] = ["color", "color gradient", "metrics dependent"]
+        mode_dropdown["values"] = ["color", "color gradient", "metrics dependent", "time dependent"]
         mode_dropdown.grid(row=0, column=1, padx=5, pady=5)
 
         metric = "cpu_usage"
@@ -304,26 +304,32 @@ class LEDDisplayUI:
         color1_var = tk.StringVar(value=start_color)
         color2_var = tk.StringVar(value=end_color)
         metric_var = tk.StringVar(value=metric)
+        time_unit_var = tk.StringVar(value="seconds")
 
         def update_ui(*args):
-            if mode_var.get() == "color":
-                color2_label.grid_remove()
-                color2_entry.grid_remove()
-                color2_button.grid_remove()
-                metric_dropdown.grid_remove()
-                metric_label.grid_remove()
-            elif mode_var.get() == "color gradient":
+            color2_label.grid_remove()
+            color2_entry.grid_remove()
+            color2_button.grid_remove()
+            metric_dropdown.grid_remove()
+            time_dropdown.grid_remove()
+            metric_label.grid_remove()
+            time_label.grid_remove()
+            if mode_var.get() == "color gradient":
                 color2_label.grid()
                 color2_entry.grid()
                 color2_button.grid()
-                metric_dropdown.grid_remove()
-                metric_label.grid_remove()
             elif mode_var.get() == "metrics dependent":
                 color2_label.grid()
                 color2_entry.grid()
                 color2_button.grid()
                 metric_dropdown.grid()
                 metric_label.grid()
+            elif mode_var.get() == "time dependent":
+                color2_label.grid()
+                color2_entry.grid()
+                color2_button.grid()
+                time_label.grid()
+                time_dropdown.grid()
 
         mode_var.trace("w", update_ui)
 
@@ -345,8 +351,14 @@ class LEDDisplayUI:
         metric_dropdown["values"] = ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]
         metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
 
+        time_label = tk.Label(popup, text="Time Unit:")
+        time_label.grid(row=4, column=0, padx=5, pady=5)
+        time_dropdown = ttk.Combobox(popup, textvariable=time_unit_var, state="readonly")
+        time_dropdown["values"] = ["seconds", "minutes", "hours"]
+        time_dropdown.grid(row=4, column=1, padx=5, pady=5)
+
         update_ui()
-        
+
         def on_submit():
             color1 = color1_var.get().replace("#", "")
             color2 = color2_var.get().replace("#", "")
@@ -356,10 +368,12 @@ class LEDDisplayUI:
                 result = f"{color1}-{color2}"
             elif mode_var.get() == "metrics dependent":
                 result = f"{color1}-{color2}-{metric_var.get()}"
+            elif mode_var.get() == "time dependent":
+                result = f"{color1}-{color2}-{time_unit_var.get()}"
             popup.result = result
             popup.destroy()
 
-        tk.Button(popup, text="Submit", command=on_submit).grid(row=4, column=0, columnspan=3, pady=10)
+        tk.Button(popup, text="Submit", command=on_submit).grid(row=5, column=0, columnspan=3, pady=10)
 
         popup.transient(self.root)
         self.root.update_idletasks()  # Ensure the popup is fully initialized

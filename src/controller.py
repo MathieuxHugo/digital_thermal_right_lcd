@@ -132,29 +132,41 @@ class Controller:
     def get_config_colors(self, config, key="metrics"):
         conf_colors = config.get(key, {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
         if len(conf_colors) != NUMBER_OF_LEDS:
-            print(f"Warning: config metrics colors length mismatch, using default colors.")
+            print(f"Warning: config {key} colors length mismatch, using default colors.")
             colors = ["ff0000"] * NUMBER_OF_LEDS
         else:
-            colors=[]
+            colors = []
             for color in conf_colors:
                 if "-" in color:
                     split_color = color.split("-")
                     if len(split_color) == 3:
-                        start_color, end_color, metric = split_color
-                        if self.metrics_min_value[metric] == self.metrics_max_value[metric]:
-                            print(f"Warning: {metric} min and max values are the same, using start color.")
-                            factor = 0
+                        start_color, end_color, key = split_color
+                        current_time = datetime.datetime.now()
+                        if key == "seconds":
+                            factor = current_time.second / 59
+                        elif key == "minutes":
+                            factor = current_time.minute / 59
+                        elif key == "hours":
+                            factor = current_time.hour / 23
                         else:
-                            factor = (self.metrics.get_metrics()[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
-                            if factor > 1:
-                                factor = 1
-                                print(f"Warning: {metric} value exceeds max value, clamping to 1.")
-                            elif factor < 0:
+                            metric = key
+                            if metric not in self.metrics.get_metrics():
+                                print(f"Warning: {metric} not found in metrics, using start color.")
                                 factor = 0
-                                print(f"Warning: {metric} value below min value, clamping to 0.")
+                            if self.metrics_min_value[metric] == self.metrics_max_value[metric]:
+                                print(f"Warning: {metric} min and max values are the same, using start color.")
+                                factor = 0
+                            else:
+                                factor = (self.metrics.get_metrics()[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
+                                if factor > 1:
+                                    factor = 1
+                                    print(f"Warning: {metric} value exceeds max value, clamping to 1.")
+                                elif factor < 0:
+                                    factor = 0
+                                    print(f"Warning: {metric} value below min value, clamping to 0.")
                     else:
                         start_color, end_color = split_color
-                        factor = 1-abs((self.cpt) - (self.cycle_duration)) / (self.cycle_duration)
+                        factor = 1 - abs((self.cpt) - (self.cycle_duration)) / (self.cycle_duration)
                     start_color = np.array([int(start_color[i:i+2], 16) for i in (0, 2, 4)])
                     end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
                     interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
@@ -257,4 +269,3 @@ if __name__ == '__main__':
         config_path = None
     main(config_path)
 
-    
