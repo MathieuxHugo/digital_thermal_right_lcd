@@ -1,6 +1,7 @@
 import numpy as np
 from metrics import Metrics
 from config import leds_indexes, NUMBER_OF_LEDS
+from utils import interpolate_color
 import hid
 import time
 import datetime 
@@ -166,12 +167,10 @@ class Controller:
                                     print(f"Warning: {metric} value below min value, clamping to 0.")
                     else:
                         start_color, end_color = split_color
-                        factor = 1 - abs((self.cpt) - (self.cycle_duration)) / (self.cycle_duration)
-                    start_color = np.array([int(start_color[i:i+2], 16) for i in (0, 2, 4)])
-                    end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
-                    interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
-                    interpolated_hex = ''.join(f"{c:02x}" for c in interpolated_color)
-                    colors.append(interpolated_hex)
+
+                        factor = 1 - abs((self.cpt%self.cycle_duration) - (self.cycle_duration/2)) / (self.cycle_duration/2)
+                    
+                    colors.append(interpolate_color(start_color, end_color, factor))
                 else:
                     colors.append(color)
         return np.array(colors)
