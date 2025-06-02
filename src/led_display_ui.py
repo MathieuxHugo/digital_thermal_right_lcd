@@ -295,7 +295,9 @@ class LEDDisplayUI:
 
         metric = "cpu_usage"
         time_unit = "seconds"
-        if initial_color == "random":
+        if "random" in initial_color.lower():
+            start_color = "#ffffff"
+            end_color = "#ffffff"
             mode_var.set("random")
         elif "-" in initial_color:
             split_color = initial_color.split("-")
@@ -322,9 +324,14 @@ class LEDDisplayUI:
         time_unit_var = tk.StringVar(value=time_unit)
 
         def update_ui(*args):
-            color1_label.grid_remove()
-            color1_entry.grid_remove()
-            color1_button.grid_remove()
+            if mode_var.get() == "random":
+                color1_label.grid_remove()
+                color1_entry.grid_remove()
+                color1_button.grid_remove()
+            else: 
+                color1_label.grid()
+                color1_entry.grid()
+                color1_button.grid()
             color2_label.grid_remove()
             color2_entry.grid_remove()
             color2_button.grid_remove()
