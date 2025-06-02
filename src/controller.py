@@ -1,7 +1,7 @@
 import numpy as np
 from metrics import Metrics
 from config import leds_indexes, NUMBER_OF_LEDS
-from utils import interpolate_color
+from utils import interpolate_color, get_random_color
 import hid
 import time
 import datetime 
@@ -138,7 +138,9 @@ class Controller:
         else:
             colors = []
             for color in conf_colors:
-                if "-" in color:
+                if color.lower()=="random":
+                    colors.append(get_random_color())
+                elif "-" in color:
                     split_color = color.split("-")
                     if len(split_color) == 3:
                         start_color, end_color, key = split_color

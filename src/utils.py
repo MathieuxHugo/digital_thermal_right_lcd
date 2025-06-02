@@ -15,3 +15,7 @@ def interpolate_color(start_color: str, end_color: str, factor: float) -> str:
     end_color = np.array([int(end_color[i:i+2], 16) for i in (0, 2, 4)])
     interpolated_color = (start_color * (1 - factor) + end_color * factor).astype(int)
     return ''.join(f"{c:02x}" for c in interpolated_color)
+
+def get_random_color():
+    return (f"{np.random.randint(0, 256):02x}{np.random.randint(0, 256):02x}{np.random.randint(0, 256):02x}")
+                

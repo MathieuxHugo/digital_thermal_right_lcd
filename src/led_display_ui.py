@@ -6,7 +6,7 @@ from config import leds_indexes, NUMBER_OF_LEDS, display_modes
 import numpy as np
 import threading
 import time
-from utils import interpolate_color
+from utils import interpolate_color, get_random_color
 segmented_digit_layout = {# Position segments in a 7-segment layout
     "top_left":
         {"row":1, "column":0, "padx":2, "pady":0, "orientation": "Vertical"},
@@ -56,7 +56,9 @@ class LEDDisplayUI:
             colors = np.array(self.config[self.color_mode.get()]["colors"])
             for index in range(NUMBER_OF_LEDS):
                 color = colors[index]
-                if "-" in color:
+                if color.lower() == "random":
+                    color = get_random_color()
+                elif "-" in color:
                     split_color = color.split("-")
                     if len(split_color) == 3:
                         start_color, end_color, metric = split_color
@@ -179,7 +181,6 @@ class LEDDisplayUI:
                 parent_frame,
                 width=5,
                 height=20,
-                bg=self.get_color(label,led_index).split("-")[0],
                 highlightthickness=0,
             )
         else:
@@ -187,7 +188,6 @@ class LEDDisplayUI:
                 parent_frame,
                 width=20,
                 height=5,
-                bg=self.get_color(label,led_index).split("-")[0],
                 highlightthickness=0,
             )
         segment.grid(
@@ -286,15 +286,26 @@ class LEDDisplayUI:
         mode_var = tk.StringVar(value="color")
         tk.Label(popup, text="Select Mode:").grid(row=0, column=0, padx=5, pady=5)
         mode_dropdown = ttk.Combobox(popup, textvariable=mode_var, state="readonly")
-        mode_dropdown["values"] = ["color", "color gradient", "metrics dependent", "time dependent"]
+        mode_dropdown["values"] = ["color", "color gradient", "metrics dependent", "time dependent", "random"]
         mode_dropdown.grid(row=0, column=1, padx=5, pady=5)
 
         metric = "cpu_usage"
-        if "-" in initial_color:
+        time_unit = "seconds"
+        if initial_color == "random":
+            mode_var.set("random")
+        elif "-" in initial_color:
             split_color = initial_color.split("-")
             if len(split_color) == 3:
-                start_color, end_color, metric = split_color
+                start_color, end_color, key = split_color
+                if key in ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]:
+                    metric = key
+                    mode_var.set("metrics dependent")
+                else:
+                    time_unit = key
+                    mode_var.set("time dependent")
+
             else:
+                mode_var.set("color gradient")
                 start_color, end_color = split_color
         else:
             start_color = initial_color
@@ -304,9 +315,12 @@ class LEDDisplayUI:
         color1_var = tk.StringVar(value=start_color)
         color2_var = tk.StringVar(value=end_color)
         metric_var = tk.StringVar(value=metric)
-        time_unit_var = tk.StringVar(value="seconds")
+        time_unit_var = tk.StringVar(value=time_unit)
 
         def update_ui(*args):
+            color1_label.grid_remove()
+            color1_entry.grid_remove()
+            color1_button.grid_remove()
             color2_label.grid_remove()
             color2_entry.grid_remove()
             color2_button.grid_remove()
@@ -333,10 +347,12 @@ class LEDDisplayUI:
 
         mode_var.trace("w", update_ui)
 
-        tk.Label(popup, text="Color 1:").grid(row=1, column=0, padx=5, pady=5)
+        color1_label = tk.Label(popup, text="Color 1:")
+        color1_label.grid(row=1, column=0, padx=5, pady=5)
         color1_entry = tk.Entry(popup, textvariable=color1_var)
         color1_entry.grid(row=1, column=1, padx=5, pady=5)
-        tk.Button(popup, text="Choose", command=lambda: color1_var.set(colorchooser.askcolor()[1])).grid(row=1, column=2, padx=5, pady=5)
+        color1_button = tk.Button(popup, text="Choose", command=lambda: color1_var.set(colorchooser.askcolor()[1]))
+        color1_button.grid(row=1, column=2, padx=5, pady=5)
 
         color2_label = tk.Label(popup, text="Color 2:")
         color2_label.grid(row=2, column=0, padx=5, pady=5)
@@ -370,6 +386,8 @@ class LEDDisplayUI:
                 result = f"{color1}-{color2}-{metric_var.get()}"
             elif mode_var.get() == "time dependent":
                 result = f"{color1}-{color2}-{time_unit_var.get()}"
+            elif mode_var.get() == "random":
+                result = "random"
             popup.result = result
             popup.destroy()
 
