@@ -176,7 +176,7 @@
             "0000ff-ff0000"
         ]
     },
-    "update_interval": 0.3,
+    "update_interval": 0.1,
     "metrics_update_interval": 1.0,
     "cycle_duration": 20.0,
     "gpu_min_temp": 30.0,

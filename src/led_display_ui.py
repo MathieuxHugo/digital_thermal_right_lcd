@@ -427,23 +427,26 @@ class LEDDisplayUI:
     
     def create_config_panel(self, root):
         config_frame = ttk.LabelFrame(root, text="Configuration Settings", padding=(10, 10))
-        config_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
+        config_frame.grid(row=0, column=1, padx=10, pady=10, sticky="ns")
 
         self.config_vars = {}
         config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp"]
 
         for i, key in enumerate(config_keys):
             label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
-            label.grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            label.grid(row=i, column=0, padx=5, pady=10, sticky="w")
 
             var = tk.DoubleVar(value=self.config.get(key, 0))
             entry = ttk.Entry(config_frame, textvariable=var)
-            entry.grid(row=i, column=1, padx=5, pady=5)
+            entry.grid(row=i, column=1, padx=5, pady=10, sticky="ew")
 
             self.config_vars[key] = var
 
+        config_frame.rowconfigure(tuple(range(len(config_keys))), weight=1)
+        config_frame.columnconfigure(1, weight=1)
+
         save_button = ttk.Button(config_frame, text="Save", command=self.save_config_changes)
-        save_button.grid(row=len(config_keys), column=0, columnspan=2, pady=10)
+        save_button.grid(row=len(config_keys), column=0, columnspan=2, pady=20)
 
     def save_config_changes(self):
         for key, var in self.config_vars.items():
