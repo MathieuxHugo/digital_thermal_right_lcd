@@ -34,16 +34,20 @@ class LEDDisplayUI:
 
         self.leds_ui = [None] * NUMBER_OF_LEDS
 
-        display_frame = ttk.Frame(root, padding=(10, 10))
+        color_frame = ttk.Frame(root, padding=(10, 10))
+        color_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.create_config_panel(root)
+
+        display_frame = ttk.Frame(color_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
         self.create_display_mode(display_frame)
         # Create frames for CPU and GPU
-        self.cpu_frame = self.create_device_frame(root, "cpu", 1)
-        self.gpu_frame = self.create_device_frame(root, "gpu", 2)
+        self.cpu_frame = self.create_device_frame(color_frame, "cpu", 1)
+        self.gpu_frame = self.create_device_frame(color_frame, "gpu", 2)
 
         # Add controls for group selection and color change
-        self.create_controls(root)
+        self.create_controls(color_frame)
         self.update_interval = self.config["update_interval"]
         self.cycle_duration = self.config["cycle_duration"]
         self.start_time = time.time()
@@ -420,9 +424,31 @@ class LEDDisplayUI:
         if result:
             self.set_color(led_index, result)
             self.write_config()
-            
+    
+    def create_config_panel(self, root):
+        config_frame = ttk.LabelFrame(root, text="Configuration Settings", padding=(10, 10))
+        config_frame.grid(row=0, column=1, padx=10, pady=10, sticky="n")
 
+        self.config_vars = {}
+        config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp"]
 
+        for i, key in enumerate(config_keys):
+            label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
+            label.grid(row=i, column=0, padx=5, pady=5, sticky="w")
+
+            var = tk.DoubleVar(value=self.config.get(key, 0))
+            entry = ttk.Entry(config_frame, textvariable=var)
+            entry.grid(row=i, column=1, padx=5, pady=5)
+
+            self.config_vars[key] = var
+
+        save_button = ttk.Button(config_frame, text="Save", command=self.save_config_changes)
+        save_button.grid(row=len(config_keys), column=0, columnspan=2, pady=10)
+
+    def save_config_changes(self):
+        for key, var in self.config_vars.items():
+            self.config[key] = var.get()
+        self.write_config()
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -433,5 +459,5 @@ if __name__ == "__main__":
     else:
         print("No config path provided, using default.")
         app = LEDDisplayUI(root)
-    
+
     root.mainloop()

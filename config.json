@@ -176,11 +176,11 @@
             "0000ff-ff0000"
         ]
     },
-    "update_interval": 0.2,
-    "metrics_update_interval": 1,
-    "cycle_duration": 20,
-    "gpu_min_temp": 30,
-    "gpu_max_temp": 90,
-    "cpu_min_temp": 30,
-    "cpu_max_temp": 80
+    "update_interval": 0.3,
+    "metrics_update_interval": 1.0,
+    "cycle_duration": 20.0,
+    "gpu_min_temp": 30.0,
+    "gpu_max_temp": 90.0,
+    "cpu_min_temp": 30.0,
+    "cpu_max_temp": 80.0
 }
