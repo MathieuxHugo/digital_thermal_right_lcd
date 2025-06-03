@@ -55,12 +55,8 @@ class Controller:
         self.metrics = Metrics()
         self.VENDOR_ID = 0x0416   
         self.PRODUCT_ID = 0x8001 
+        self.dev = self.get_device()
         self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
-        try:
-            self.dev = hid.Device(self.VENDOR_ID, self.PRODUCT_ID)
-        except Exception as e:
-            print(f"Error initializing HID device: {e}")
-            exit(1)
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.leds_indexes = leds_indexes
         # Configurable config path
@@ -82,12 +78,18 @@ class Controller:
             print(f"Error loading config: {e}")
             return None
 
+    def get_device(self):
+        try:
+            return hid.Device(self.VENDOR_ID, self.PRODUCT_ID)
+        except Exception as e:
+            print(f"Error initializing HID device: {e}")
+            return None
+
     def set_leds(self, key, value):
         self.leds[self.leds_indexes[key]] = value
 
     def send_packets(self):
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(NUMBER_OF_LEDS)])
-
         packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
         packets = message[88:]
@@ -181,6 +183,8 @@ class Controller:
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.config = self.load_config()
         if self.config:
+            VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
+            PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
             self.metrics_max_value = {
                 "cpu_temp": self.config.get('cpu_max_temp', 90),
                 "gpu_temp": self.config.get('gpu_max_temp', 90),
@@ -200,6 +204,8 @@ class Controller:
             self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
             self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
         else:
+            VENDOR_ID = 0x0416
+            PRODUCT_ID = 0x8001
             self.metrics_max_value = {
                 "cpu_temp": 90,
                 "gpu_temp": 90,
@@ -218,41 +224,52 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
+        
+
+        if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
+            print(f"Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
+            self.VENDOR_ID = VENDOR_ID
+            self.PRODUCT_ID = PRODUCT_ID
+            self.dev = self.get_device()
 
     def display(self):
         while True:
             self.config = self.load_config()
             self.update()
-            if self.display_mode == "alternate_time":
-                if self.cpt < self.cycle_duration:
-                    self.display_time()
-                    self.display_metrics(devices=['gpu'])
-                else:
+            if self.dev is None:
+                print("No device found, with VENDOR_ID: {}, PRODUCT_ID: {}".format(self.VENDOR_ID, self.PRODUCT_ID))
+                time.sleep(5)
+            else:
+                if self.display_mode == "alternate_time":
+                    if self.cpt < self.cycle_duration:
+                        self.display_time()
+                        self.display_metrics(devices=['gpu'])
+                    else:
+                        self.display_time(device="gpu")
+                        self.display_metrics(devices=['cpu'])
+                elif self.display_mode == "metrics":
+                    self.display_metrics(devices=["cpu", "gpu"])
+                elif self.display_mode == "time":
+                    self.display_time_with_seconds()
+                elif self.display_mode == "time_cpu":
                     self.display_time(device="gpu")
                     self.display_metrics(devices=['cpu'])
-            elif self.display_mode == "metrics":
-                self.display_metrics(devices=["cpu", "gpu"])
-            elif self.display_mode == "time":
-                self.display_time_with_seconds()
-            elif self.display_mode == "time_cpu":
-                self.display_time(device="gpu")
-                self.display_metrics(devices=['cpu'])
-            elif self.display_mode == "time_gpu":
-                self.display_time()
-                self.display_metrics(devices=['gpu'])
-            elif self.display_mode == "alternate_time_with_seconds":
-                if self.cpt < self.cycle_duration:
-                    self.display_time_with_seconds()
+                elif self.display_mode == "time_gpu":
+                    self.display_time()
+                    self.display_metrics(devices=['gpu'])
+                elif self.display_mode == "alternate_time_with_seconds":
+                    if self.cpt < self.cycle_duration:
+                        self.display_time_with_seconds()
+                    else:
+                        self.display_metrics()
+                elif self.display_mode == "debug_ui":
+                    self.colors = self.time_colors
+                    self.leds[:] = 1
                 else:
-                    self.display_metrics()
-            elif self.display_mode == "debug_ui":
-                self.colors = self.time_colors
-                self.leds[:] = 1
-            else:
-                print(f"Unknown display mode: {self.display_mode}")
-            
-            self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
-            self.send_packets()
+                    print(f"Unknown display mode: {self.display_mode}")
+                
+                self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
+                self.send_packets()
             time.sleep(self.update_interval)
 
 

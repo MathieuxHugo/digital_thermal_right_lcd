@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import leds_indexes, NUMBER_OF_LEDS, display_modes
+from config import leds_indexes, NUMBER_OF_LEDS, display_modes, default_config
 import numpy as np
 import threading
 import time
@@ -52,6 +52,19 @@ class LEDDisplayUI:
         self.cycle_duration = self.config["cycle_duration"]
         self.start_time = time.time()
         threading.Thread(target=self.update_ui_loop, daemon=True).start()
+
+
+        reset_button = ttk.Button(
+            root,
+            text="Reset default config",
+            command=lambda: self.set_default_config(),
+        )
+        reset_button.grid(row=2, column=0, padx=10, pady=10, columnspan=2)
+
+    def set_default_config(self):
+        self.config = default_config.copy()
+        self.write_config()
+        print("Default config set.")
 
     def update_ui_loop(self):
         while True:
@@ -146,7 +159,6 @@ class LEDDisplayUI:
         unit_style = {"font": ("Arial", 20), "cursor": "hand2"}
         label = ttk.Label(parent_frame, text=text, **unit_style)
         label.grid(row=row, column=column, padx=0, pady=5)
-        label.config(foreground=self.get_color(led_key,index).split("-")[0])
         label.bind(
             "<Button-1>",
             lambda event,
@@ -437,15 +449,27 @@ class LEDDisplayUI:
         config_frame.grid(row=0, column=1, padx=10, pady=10, sticky="ns")
 
         self.config_vars = {}
-        config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp"]
+        # Add temperature unit dropdowns
+        ttk.Label(config_frame, text="CPU Temperature Unit:").grid(row=0, column=0, padx=5, pady=10, sticky="w")
+        cpu_temp_unit = tk.StringVar(value=self.config.get("cpu_temperature_unit", "celsius"))
+        cpu_unit_dropdown = ttk.Combobox(config_frame, textvariable=cpu_temp_unit, state="readonly", values=["celsius", "fahrenheit"])
+        cpu_unit_dropdown.grid(row=0, column=1, padx=5, pady=10, sticky="ew")
+        self.config_vars["cpu_temperature_unit"] = cpu_temp_unit
+
+        ttk.Label(config_frame, text="GPU Temperature Unit:").grid(row=1, column=0, padx=5, pady=10, sticky="w")
+        gpu_temp_unit = tk.StringVar(value=self.config.get("gpu_temperature_unit", "celsius"))
+        gpu_unit_dropdown = ttk.Combobox(config_frame, textvariable=gpu_temp_unit, state="readonly", values=["celsius", "fahrenheit"])
+        gpu_unit_dropdown.grid(row=1, column=1, padx=5, pady=10, sticky="ew")
+        self.config_vars["gpu_temperature_unit"] = gpu_temp_unit
+        config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp", "product_id", "vendor_id"]
 
         for i, key in enumerate(config_keys):
             label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
-            label.grid(row=i, column=0, padx=5, pady=10, sticky="w")
+            label.grid(row=i+2, column=0, padx=5, pady=10, sticky="w")
 
             var = tk.DoubleVar(value=self.config.get(key, 0))
             entry = ttk.Entry(config_frame, textvariable=var)
-            entry.grid(row=i, column=1, padx=5, pady=10, sticky="ew")
+            entry.grid(row=i+2, column=1, padx=5, pady=10, sticky="ew")
 
             self.config_vars[key] = var
 
