@@ -36,7 +36,7 @@ class LEDDisplayUI:
 
         color_frame = ttk.Frame(root, padding=(10, 10))
         color_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_config_panel(root)
+        self.config_frame = self.create_config_panel(root)
 
         display_frame = ttk.Frame(color_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
@@ -64,6 +64,8 @@ class LEDDisplayUI:
     def set_default_config(self):
         self.config = default_config.copy()
         self.write_config()
+        self.config_frame.destroy()
+        self.config_frame = self.create_config_panel(self.root)
         print("Default config set.")
 
     def update_ui_loop(self):
@@ -461,7 +463,7 @@ class LEDDisplayUI:
         gpu_unit_dropdown = ttk.Combobox(config_frame, textvariable=gpu_temp_unit, state="readonly", values=["celsius", "fahrenheit"])
         gpu_unit_dropdown.grid(row=1, column=1, padx=5, pady=10, sticky="ew")
         self.config_vars["gpu_temperature_unit"] = gpu_temp_unit
-        config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp", "product_id", "vendor_id"]
+        config_keys = ["update_interval", "metrics_update_interval", "cycle_duration", "gpu_min_temp", "gpu_max_temp", "cpu_min_temp", "cpu_max_temp"]
 
         for i, key in enumerate(config_keys):
             label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
@@ -473,11 +475,23 @@ class LEDDisplayUI:
 
             self.config_vars[key] = var
 
+        for i, key in enumerate(["product_id", "vendor_id"]):
+            label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
+            label.grid(row=i+len(config_keys)+2, column=0, padx=5, pady=10, sticky="w")
+
+            var = tk.StringVar(value=hex(self.config.get(key, 0)))
+            entry = ttk.Entry(config_frame, textvariable=var)
+            entry.grid(row=i+len(config_keys)+2, column=1, padx=5, pady=10, sticky="ew")
+
+            self.config_vars[key] = var
+        
+
         config_frame.rowconfigure(tuple(range(len(config_keys))), weight=1)
         config_frame.columnconfigure(1, weight=1)
 
         save_button = ttk.Button(config_frame, text="Save", command=self.save_config_changes)
-        save_button.grid(row=len(config_keys), column=0, columnspan=2, pady=20)
+        save_button.grid(row=len(config_keys)+4, column=0, columnspan=2, pady=20)
+        return config_frame
 
     def save_config_changes(self):
         for key, var in self.config_vars.items():

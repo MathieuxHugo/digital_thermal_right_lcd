@@ -52,6 +52,7 @@ def get_number_array(temp, array_length=3, fill_value=-1):
 
 class Controller:
     def __init__(self, config_path=None):
+        self.temp_unit = {"cpu": "celsius", "gpu": "celsius"}
         self.metrics = Metrics()
         self.VENDOR_ID = 0x0416   
         self.PRODUCT_ID = 0x8001 
@@ -97,10 +98,14 @@ class Controller:
             packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
             self.dev.write(packet)
 
-    def set_temp(self, temperature : int, device='cpu', unit="celsius"):
-        if temperature<1000:
-            self.set_leds(device+'_temp', digit_mask[get_number_array(temperature)].flatten())
-            self.set_leds(device+'_'+unit, 1)
+    def set_temp(self, temperature: int, device='cpu', unit="celsius"):        
+
+        if temperature < 1000:
+            self.set_leds(device + '_temp', digit_mask[get_number_array(temperature)].flatten())
+            if unit == "celsius":
+                self.set_leds(device + '_celsius', 1)
+            elif unit == "fahrenheit":
+                self.set_leds(device + '_fahrenheit', 1)
         else:
             raise Exception("The numbers displayed on the temperature LCD must be less than 1000")
     def set_usage(self, usage : int, device='cpu'):
@@ -111,10 +116,12 @@ class Controller:
             raise Exception("The numbers displayed on the usage LCD must be less than 200")
 
     def display_metrics(self, devices=["cpu","gpu"]):
-        metrics = self.metrics.get_metrics()
+
+        self.temp_unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in devices}
+        metrics = self.metrics.get_metrics(temp_unit=self.temp_unit)
         for device in devices:
             self.set_leds(device+"_led", 1)
-            self.set_temp(metrics[device+"_temp"], device=device)
+            self.set_temp(metrics[device+"_temp"], device=device, unit=self.temp_unit[device])
             self.set_usage(metrics[device+"_usage"], device=device)
             self.colors[self.leds_indexes[device]] = self.metrics_colors[self.leds_indexes[device]]
 
@@ -155,14 +162,14 @@ class Controller:
                             factor = current_time.hour / 23
                         else:
                             metric = key
-                            if metric not in self.metrics.get_metrics():
+                            if metric not in self.metrics.get_metrics(self.temp_unit):
                                 print(f"Warning: {metric} not found in metrics, using start color.")
                                 factor = 0
                             if self.metrics_min_value[metric] == self.metrics_max_value[metric]:
                                 print(f"Warning: {metric} min and max values are the same, using start color.")
                                 factor = 0
                             else:
-                                factor = (self.metrics.get_metrics()[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
+                                factor = (self.metrics.get_metrics(self.temp_unit)[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
                                 if factor > 1:
                                     factor = 1
                                     print(f"Warning: {metric} value exceeds max value, clamping to 1.")
@@ -183,8 +190,8 @@ class Controller:
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.config = self.load_config()
         if self.config:
-            VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
-            PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
+            VENDOR_ID = self.config.get('vendor_id', "0x0416")
+            PRODUCT_ID = self.config.get('product_id', "0x8001")
             self.metrics_max_value = {
                 "cpu_temp": self.config.get('cpu_max_temp', 90),
                 "gpu_temp": self.config.get('gpu_max_temp', 90),

@@ -61,7 +61,7 @@ class Metrics:
         self.last_update = time.time()
         self.update_interval = update_interval # seconds
 
-    def get_metrics(self):
+    def get_metrics(self, temp_unit):
         if time.time() - self.last_update < self.update_interval:
             return self.metrics
         else:
@@ -76,6 +76,9 @@ class Metrics:
                     except Exception as e:
                         print(f"Error getting {metric}: {e}")
             self.last_update = time.time()
+        for device in ["cpu", "gpu"]:
+            if temp_unit[device] == "fahrenheit":
+                self.metrics[f"{device}_temp"] = int(self.metrics[f"{device}_temp"] * 9 / 5 + 32)
         return self.metrics
 
     def get_gpu_usage_amd(self):
@@ -105,7 +108,6 @@ def get_cpu_temp_psutils():
                         return temps[key][0].current
     except Exception:
         return None
-
 def get_cpu_temp_linux():
     try:
         with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
