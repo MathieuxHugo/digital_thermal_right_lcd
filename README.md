@@ -20,6 +20,10 @@ You may also launch it directcly with python
 `python3 src/controller.py config.json`
 
 # Set up as a service so it start at each startup: 
+Create a file in /etc/systemd/system/digital_lcd_controller.service:
+`sudo nano /etc/systemd/system/digital_lcd_controller.service`
+
+Write this inside :
 ```
 [Unit]
 Description=Lcd screen controller
@@ -37,3 +41,7 @@ RestartSec=5s
 [Install]
 WantedBy=multi-user.target
 ```
+
+#  Modify the confid with the UI :
+
+`python3 src/led_display_ui.py config.json`
