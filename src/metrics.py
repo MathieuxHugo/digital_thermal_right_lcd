@@ -8,17 +8,7 @@ try:
 except Exception as e:
     print("pyamdgpuinfo cannot start : ",str(e))
 
-try:
-    import WinTmp
-except Exception as e:
-    print("WinTmp cannot start : ",str(e))
-    WinTmp = None
 
-try:
-    import wmi
-except Exception as e:
-    print("wmi cannot start : ",str(e))
-    wmi = None
 
 class Metrics:
     def __init__(self, update_interval=0.5):
@@ -121,6 +111,7 @@ def get_cpu_temp_linux():
         return None
 def get_cpu_temp_windows_wmi(): 
     try:
+        import wmi
         w = wmi.WMI(namespace="root\\wmi")
         temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
         return (temperature_info.CurrentTemperature / 10.0) - 273.15
@@ -129,6 +120,7 @@ def get_cpu_temp_windows_wmi():
 
 def get_cpu_temp_windows_wintmp():
     try:
+        import WinTmp
         return WinTmp.CPU_Temp()
     except Exception:
         return None
@@ -167,6 +159,7 @@ def get_gpu_temp_nvidia():
 
 def get_gpu_temp_wintemp():
     try:
+        import WinTmp
         return WinTmp.GPU_Temp()
     except Exception:
         return None
