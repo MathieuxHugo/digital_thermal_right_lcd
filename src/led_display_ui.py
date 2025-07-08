@@ -104,7 +104,7 @@ class LEDDisplayUI:
             return leds_indexes[led_key][index]
 
     def get_color(self, led_key, index=None):
-        return f"#{np.array(self.config[self.color_mode.get()]["colors"])[self.get_index(led_key, index)]}"
+        return f"#{np.array(self.config[self.color_mode.get()]['colors'])[self.get_index(led_key, index)]}"
     
     def set_color(self, led_index, color):
         if self.config:
