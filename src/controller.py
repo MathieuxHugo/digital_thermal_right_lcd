@@ -190,8 +190,8 @@ class Controller:
         self.leds = np.array([0] * NUMBER_OF_LEDS)
         self.config = self.load_config()
         if self.config:
-            VENDOR_ID = self.config.get('vendor_id', "0x0416")
-            PRODUCT_ID = self.config.get('product_id', "0x8001")
+            VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
+            PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
             self.metrics_max_value = {
                 "cpu_temp": self.config.get('cpu_max_temp', 90),
                 "gpu_temp": self.config.get('gpu_max_temp', 90),

@@ -479,7 +479,7 @@ class LEDDisplayUI:
             label = ttk.Label(config_frame, text=key.replace("_", " ").capitalize() + ":")
             label.grid(row=i+len(config_keys)+2, column=0, padx=5, pady=10, sticky="w")
 
-            var = tk.StringVar(value=hex(self.config.get(key, 0)))
+            var = tk.StringVar(value=(self.config.get(key, 0)))
             entry = ttk.Entry(config_frame, textvariable=var)
             entry.grid(row=i+len(config_keys)+2, column=1, padx=5, pady=10, sticky="ew")
 
