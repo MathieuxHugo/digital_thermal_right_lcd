@@ -28,7 +28,12 @@ class Metrics:
             'cpu_usage': None,
             'gpu_usage': None
         }
-        self.metrics = {}
+        self.metrics = {
+            'cpu_temp': 0,
+            'gpu_temp': 0,
+            'cpu_usage': 0,
+            'gpu_usage': 0
+        }
         try:
             device_count = pyamdgpuinfo.detect_gpus()
             if device_count > 0:
