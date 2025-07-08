@@ -178,7 +178,7 @@
     },
     "update_interval": 0.1,
     "metrics_update_interval": 1.0,
-    "cycle_duration": 20.0,
+    "cycle_duration": 10.0,
     "gpu_min_temp": 30.0,
     "gpu_max_temp": 90.0,
     "cpu_min_temp": 30.0,

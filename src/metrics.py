@@ -37,9 +37,9 @@ class Metrics:
 
         candidates =  {
             'cpu_temp': [get_cpu_temp_psutils,get_cpu_temp_linux,get_cpu_temp_windows_wmi,get_cpu_temp_windows_wintmp,get_cpu_temp_raspberry_pi],
-            'gpu_temp': [self.get_gpu_temp_amdgpuinfo, get_gpu_temp_nvidia,get_gpu_temp_wintemp,get_gpu_temp_nvidia],
+            'gpu_temp': [get_gpu_temp_nvidia,get_gpu_temp_wintemp, self.get_gpu_temp_amdgpuinfo],
             'cpu_usage': [get_cpu_usage],
-            'gpu_usage': [self.get_gpu_usage_amd,get_gpu_usage_nvidia_smi(),get_gpu_usage_nvml]
+            'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,]
         }
         for metric, functions in candidates.items():
             for function in functions:

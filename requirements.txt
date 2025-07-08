@@ -6,3 +6,4 @@ pyamdgpuinfo==2.1.7
 pyinstaller==6.13.0
 WinTmp==1.2.0
 WMI==1.4.9
+pynvml==12.0.0
