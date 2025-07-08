@@ -116,8 +116,7 @@ class Controller:
             raise Exception("The numbers displayed on the usage LCD must be less than 200")
 
     def display_metrics(self, devices=["cpu","gpu"]):
-
-        self.temp_unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in devices}
+        self.temp_unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
         metrics = self.metrics.get_metrics(temp_unit=self.temp_unit)
         for device in devices:
             self.set_leds(device+"_led", 1)
