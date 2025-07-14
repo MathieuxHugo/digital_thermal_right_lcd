@@ -16,16 +16,17 @@ leds_indexes = {
     "gpu_percent_led": 42,
 }
 
-leds_indexes_small = {
-    "all" : list(range(0, 26)),
-    "digit_frame" : list(range(0, 21)),
-    "celsius": 21,
-    "fahrenheit": 22,
-    "percent_led" : 23,
-    "gpu_led": 24,
-    "cpu_led": 25,
-}
 
+
+leds_indexes_small = {
+    "all": list(range(0, 31)),
+    "digit_frame": list(range(9, 30)),
+    "celsius": 6,
+    "fahrenheit": 7,
+    "percent_led": 8,
+    "gpu_led": [4,5],
+    "cpu_led": [2,3],
+}
 
 display_modes = [
     "alternate_time",

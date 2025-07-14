@@ -70,49 +70,51 @@ class LEDDisplayUI:
             widget.destroy()
 
         self.number_of_leds = NUMBER_OF_LEDS
-        self.leds_ui = [None] * self.number_of_leds
+        self.leds_ui = np.array([None] * self.number_of_leds)
 
-        color_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
-        color_frame.grid(row=0, column=0, padx=10, pady=10)
+        led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
+        led_frame.grid(row=0, column=0, padx=10, pady=10)
         self.config_frame = self.create_config_panel(self.layout_frame)
 
-        display_frame = ttk.Frame(color_frame, padding=(10, 10))
+        display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
         self.create_display_mode(display_frame)
 
         # Create frames for CPU and GPU
-        self.cpu_frame = self.create_device_frame(color_frame, "cpu", 1)
-        self.gpu_frame = self.create_device_frame(color_frame, "gpu", 2)
+        self.cpu_frame = self.create_device_frame(led_frame, "cpu", 1)
+        self.gpu_frame = self.create_device_frame(led_frame, "gpu", 2)
 
         # Add controls for group selection and color change
-        self.create_controls(color_frame)
+        self.create_controls(led_frame)
 
     def create_small_layout(self):
         # Clear previous layout
         for widget in self.layout_frame.winfo_children():
             widget.destroy()
 
-        self.number_of_leds = 26
-        self.leds_ui = [None] * self.number_of_leds
+        self.number_of_leds = 30
+        self.leds_ui = np.array([None] * self.number_of_leds)
 
-        color_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
-        color_frame.grid(row=0, column=0, padx=10, pady=10)
+        led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
+        led_frame.grid(row=0, column=0, padx=10, pady=10)
         self.config_frame = self.create_config_panel(self.layout_frame)
 
-        display_frame = ttk.Frame(color_frame, padding=(10, 10))
-        display_frame.grid(row=0, column=0, padx=10, pady=10)
+        # Display controls at the top (row 0)
+        display_frame = ttk.Frame(led_frame, padding=(10, 10))
+        display_frame.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
         self.create_color_mode(display_frame)
         self.create_display_mode(display_frame)
 
-        device_led_frame = ttk.Frame(color_frame)
-        device_led_frame.grid(row=0, column=0, padx=5, pady=5)
+        # Device LED labels in row 1
+        device_led_frame = ttk.Frame(led_frame)
+        device_led_frame.grid(row=1, column=0, padx=5, pady=5)
+        
+        self.create_label(device_led_frame, "cpu_led", "CPU", 0, 0)
+        self.create_label(device_led_frame, "gpu_led", "GPU", 0, 1)
 
-        self.create_label(color_frame, "cpu_led", "CPU", 0, 0)
-        self.create_label(color_frame, "gpu_led", "GPU", 0, 1)
-
-        # Add temperature unit selection
-        unit_frame = ttk.Frame(color_frame)
+        # Temperature unit selection in row 1, column 1
+        unit_frame = ttk.Frame(led_frame)
         unit_frame.grid(row=1, column=1, padx=5, pady=5)
         
         # Create clickable labels for °C and °F
@@ -120,13 +122,14 @@ class LEDDisplayUI:
         self.create_label(unit_frame, "fahrenheit", "°F", 1, 0)
         self.create_label(unit_frame, "percent_led", "%", 2, 0)
         
-        digit_frame = ttk.Frame(color_frame)
-        digit_frame.grid(row=1, column=0, padx=5, pady=5)
+        # Digit frame in row 2
+        digit_frame = ttk.Frame(led_frame)
+        digit_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
         self.create_segmented_digit_layout(digit_frame, "digit_frame")
         
+        # Add controls for group selection and color change in row 3
+        self.create_controls(led_frame, row=3)
 
-        # Add controls for group selection and color change
-        self.create_controls(color_frame)
 
     def change_layout_mode(self):
         if self.layout_mode.get() == "big":
