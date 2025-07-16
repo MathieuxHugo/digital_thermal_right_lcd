@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import leds_indexes, leds_indexes_small, NUMBER_OF_LEDS, display_modes, default_config
+from config import leds_indexes, leds_indexes_small, NUMBER_OF_LEDS, display_modes, default_config, display_modes_small
 import numpy as np
 import threading
 import time
@@ -35,7 +35,7 @@ class LEDDisplayUI:
         self.style = ttk.Style()
         self.leds_indexes = leds_indexes
         # Layout mode selection
-        self.layout_mode = tk.StringVar(value="big")
+        self.layout_mode = tk.StringVar(value=self.config.get("layout_mode", "big"))
         layout_mode_frame = ttk.LabelFrame(root, text="Choose layout mode:", padding=(10, 10))
         layout_mode_frame.grid(row=0, column=0, pady=10)
         layout_dropdown = ttk.Combobox(layout_mode_frame, textvariable=self.layout_mode, state="readonly")
@@ -48,7 +48,7 @@ class LEDDisplayUI:
         self.layout_frame.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
 
         # Create initial layout (big)
-        self.create_big_layout()
+        self.change_layout_mode()
 
         # Start update thread
         self.update_interval = self.config["update_interval"]
@@ -79,7 +79,7 @@ class LEDDisplayUI:
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
-        self.create_display_mode(display_frame)
+        self.create_display_mode(display_frame, display_modes)
 
         # Create frames for CPU and GPU
         self.cpu_frame = self.create_device_frame(led_frame, "cpu", 1)
@@ -102,16 +102,17 @@ class LEDDisplayUI:
 
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
-        display_frame.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
-        self.create_color_mode(display_frame)
-        self.create_display_mode(display_frame)
+        display_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.create_display_mode(display_frame, display_modes_small)
 
         # Device LED labels in row 1
         device_led_frame = ttk.Frame(led_frame)
-        device_led_frame.grid(row=1, column=0, padx=5, pady=5)
+        device_led_frame.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
         
-        self.create_label(device_led_frame, "cpu_led", "CPU", 0, 0)
-        self.create_label(device_led_frame, "gpu_led", "GPU", 0, 1)
+        self.create_label(device_led_frame, "cpu_led", "CP", 0, 0, index=0)
+        self.create_label(device_led_frame, "cpu_led", "U", 0, 1, index=1)
+        self.create_label(device_led_frame, "gpu_led", "GP", 1, 0, index=0)
+        self.create_label(device_led_frame, "gpu_led", "U", 1, 1, index=1)
 
         # Temperature unit selection in row 1, column 1
         unit_frame = ttk.Frame(led_frame)
@@ -134,10 +135,19 @@ class LEDDisplayUI:
     def change_layout_mode(self):
         if self.layout_mode.get() == "big":
             self.leds_indexes = leds_indexes
+            self.config["layout_mode"] = "big"
+            if self.config["display_mode"] not in display_modes:
+                print(f"Warning: Display mode {self.config['display_mode']} not compatible with big layout, switching to metrics.")
+                self.config["display_mode"] = "metrics"
             self.create_big_layout()
         else:
+            self.config["layout_mode"] = "small"
+            if self.config["display_mode"] not in display_modes_small:
+                print(f"Warning: Display mode {self.config['display_mode']} not compatible with small layout, switching to alternate metrics.")
+                self.config["display_mode"] = "alternate_metrics"
             self.leds_indexes = leds_indexes_small
             self.create_small_layout()
+        self.write_config()
 
     def set_default_config(self):
         self.config = default_config.copy()
@@ -148,23 +158,26 @@ class LEDDisplayUI:
 
     def update_ui_loop(self):
         while True:
-            current_time = time.time()
-            elapsed_time = (current_time - self.start_time)%(self.cycle_duration*2)
-            colors = np.array(self.config[self.color_mode.get()]["colors"])
-            for index in range(self.number_of_leds):
-                color = colors[index]
-                if color.lower() == "random":
-                    color = get_random_color()
-                elif "-" in color:
-                    split_color = color.split("-")
-                    if len(split_color) == 3:
-                        start_color, end_color, metric = split_color
-                        factor=elapsed_time/(self.cycle_duration*2)
-                    else:
-                        start_color, end_color = split_color
-                        factor=abs(elapsed_time-self.cycle_duration)/(self.cycle_duration)
-                    color = interpolate_color(start_color=start_color, end_color=end_color, factor=factor)
-                self.set_ui_color(index, color="#"+color)
+            try:
+                current_time = time.time()
+                elapsed_time = (current_time - self.start_time)%(self.cycle_duration*2)
+                colors = np.array(self.config[self.get_color_key()]["colors"])
+                for index in range(self.number_of_leds):
+                    color = colors[index]
+                    if color.lower() == "random":
+                        color = get_random_color()
+                    elif "-" in color:
+                        split_color = color.split("-")
+                        if len(split_color) == 3:
+                            start_color, end_color, metric = split_color
+                            factor=elapsed_time/(self.cycle_duration*2)
+                        else:
+                            start_color, end_color = split_color
+                            factor=abs(elapsed_time-self.cycle_duration)/(self.cycle_duration)
+                        color = interpolate_color(start_color=start_color, end_color=end_color, factor=factor)
+                    self.set_ui_color(index, color="#"+color)
+            except Exception as e:
+                print(f"Error in update_ui_loop: {e}")
             time.sleep(self.update_interval)
 
     def load_config(self):
@@ -181,12 +194,18 @@ class LEDDisplayUI:
         else:
             return self.leds_indexes[led_key][index]
 
+    def get_color_key(self):
+        if self.layout_mode.get() == "big":
+            return self.color_mode.get()
+        else:
+            return "metrics"
+
     def get_color(self, led_key, index=None):
-        return f"#{np.array(self.config[self.color_mode.get()]['colors'])[self.get_index(led_key, index)]}"
-    
+        return f"#{np.array(self.config[self.get_color_key()]['colors'])[self.get_index(led_key, index)]}"
+
     def set_color(self, led_index, color):
         if self.config:
-            self.config[self.color_mode.get()]["colors"][led_index] = color
+            self.config[self.get_color_key()]["colors"][led_index] = color
         else:
             print("Config not loaded. Cannot set color.")
 
@@ -327,7 +346,7 @@ class LEDDisplayUI:
                 )
                 index+=1
 
-    def create_display_mode(self, root, row=0, column=0):
+    def create_display_mode(self, root, display_modes, row=0, column=0):
         display_mode_frame = ttk.LabelFrame(root, text="Choose display mode :", padding=(10, 10))
         display_mode_frame.grid(row=row, column=column, pady=10)
         self.display_mode = tk.StringVar(value=self.config["display_mode"])

@@ -1,6 +1,6 @@
 import numpy as np
 from metrics import Metrics
-from config import leds_indexes, NUMBER_OF_LEDS
+from config import leds_indexes, NUMBER_OF_LEDS, leds_indexes_small, display_modes, display_modes_small
 from utils import interpolate_color, get_random_color
 import hid
 import time
@@ -87,7 +87,10 @@ class Controller:
             return None
 
     def set_leds(self, key, value):
-        self.leds[self.leds_indexes[key]] = value
+        try:
+            self.leds[self.leds_indexes[key]] = value
+        except KeyError:
+            print(f"Warning: Key {key} not found in leds_indexes.")
 
     def send_packets(self):
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(NUMBER_OF_LEDS)])
@@ -99,7 +102,6 @@ class Controller:
             self.dev.write(packet)
 
     def set_temp(self, temperature: int, device='cpu', unit="celsius"):        
-
         if temperature < 1000:
             self.set_leds(device + '_temp', digit_mask[get_number_array(temperature)].flatten())
             if unit == "celsius":
@@ -108,6 +110,7 @@ class Controller:
                 self.set_leds(device + '_fahrenheit', 1)
         else:
             raise Exception("The numbers displayed on the temperature LCD must be less than 1000")
+
     def set_usage(self, usage : int, device='cpu'):
         if usage<200:
             self.set_leds(device+'_usage', np.concatenate(([int(usage>=100)]*2,digit_mask[get_number_array(usage, array_length=2)].flatten())))
@@ -137,6 +140,25 @@ class Controller:
         self.set_leds('cpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
         self.colors = self.time_colors
 
+    def display_temp_small(self, device='cpu'):
+        unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
+        self.set_leds(unit[device], 1)
+        current_temp = self.metrics.get_metrics(self.temp_unit)[f"{device}_temp"]
+        self.colors = self.metrics_colors
+        if current_temp is not None:
+            self.set_leds('digit_frame', digit_mask[get_number_array(current_temp, array_length=3, fill_value=0)].flatten())
+        else:
+            print(f"Warning: {device} temperature not available.")
+    
+    def display_usage_small(self, device='cpu'):   
+        current_usage = self.metrics.get_metrics(self.temp_unit)[f"{device}_usage"]
+        self.set_leds('percent_led', 1)
+
+        self.colors = self.metrics_colors
+        if current_usage is not None:
+            self.set_leds('digit_frame', digit_mask[get_number_array(current_usage, array_length=3, fill_value=0)].flatten())
+        else:
+            print(f"Warning: {device} usage not available.")
 
     def get_config_colors(self, config, key="metrics"):
         conf_colors = config.get(key, {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
@@ -209,6 +231,16 @@ class Controller:
             self.update_interval = self.config.get('update_interval', 0.1)
             self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
             self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
+            if self.config.get('layout_mode', 'big')== 'small':
+                self.leds_indexes = leds_indexes_small
+                if self.display_mode not in display_modes_small:
+                    print(f"Warning: Display mode {self.display_mode} not compatible with small layout, switching to alternate metrics.")
+                    self.display_mode = "alternate_metrics"
+            else:
+                self.leds_indexes = leds_indexes
+                if self.display_mode not in display_modes:
+                    print(f"Warning: Display mode {self.display_mode} not compatible with big layout, switching to metrics.")
+                    self.display_mode = "metrics"
         else:
             VENDOR_ID = 0x0416
             PRODUCT_ID = 0x8001
@@ -230,6 +262,7 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
+            self.leds_indexes = leds_indexes
         
 
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
@@ -268,8 +301,25 @@ class Controller:
                         self.display_time_with_seconds()
                     else:
                         self.display_metrics()
+                elif self.display_mode == "alternate_metrics":
+                    if self.cpt < self.cycle_duration/2:
+                        self.display_temp_small(device='cpu')
+                    elif self.cpt < self.cycle_duration:
+                        self.display_temp_small(device='gpu')
+                    elif self.cpt < 3*self.cycle_duration/4:
+                        self.display_usage_small(device='gpu')
+                    else:
+                        self.display_usage_small(device='gpu')
+                elif self.display_mode == "cpu_temp":
+                    self.display_temp_small(device='cpu')
+                elif self.display_mode == "gpu_temp":
+                    self.display_temp_small(device='gpu')
+                elif self.display_mode == "cpu_usage":
+                    self.display_usage_small(device='cpu')
+                elif self.display_mode == "gpu_usage":
+                    self.display_usage_small(device='gpu')
                 elif self.display_mode == "debug_ui":
-                    self.colors = self.time_colors
+                    self.colors = self.metrics_colors
                     self.leds[:] = 1
                 else:
                     print(f"Unknown display mode: {self.display_mode}")
