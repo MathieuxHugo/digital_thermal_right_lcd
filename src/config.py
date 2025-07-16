@@ -1,7 +1,7 @@
 leds_indexes = {
-    "all" : list(range(0, 84)),
-    "cpu" : list(range(0, 42)),
-    "gpu" : list(range(42, 84)),
+    "all": list(range(0, 84)),
+    "cpu": list(range(0, 42)),
+    "gpu": list(range(42, 84)),
     "cpu_led": [0, 1],
     "cpu_temp": list(range(2, 23)),
     "cpu_celsius": 23,
@@ -16,16 +16,14 @@ leds_indexes = {
     "gpu_percent_led": 42,
 }
 
-
-
 leds_indexes_small = {
     "all": list(range(0, 31)),
-    "digit_frame": list(range(9, 30)),
+    "digit_frame": [14, 9, 10, 15, 13, 12, 11, 21, 16, 17, 22, 20, 19, 18, 28, 23, 24, 29, 27, 26, 25],
     "celsius": 6,
     "fahrenheit": 7,
     "percent_led": 8,
-    "gpu_led": [4,5],
-    "cpu_led": [2,3],
+    "gpu_led": [4, 5],
+    "cpu_led": [2, 3],
 }
 
 display_modes = [
@@ -127,7 +125,7 @@ default_config = {
             "ff0000-0000ff",
             "ff0000-0000ff",
             "random",
-            "random"
+            "random",
         ]
     },
     "time": {
@@ -215,7 +213,7 @@ default_config = {
             "0000ff-ff0000",
             "0000ff-ff0000",
             "0000ff-ff0000",
-            "0000ff-ff0000"
+            "0000ff-ff0000",
         ]
     },
     "update_interval": 0.1,
@@ -228,5 +226,5 @@ default_config = {
     "product_id": 0x8001,
     "vendor_id": 0x416,
     "cpu_temperature_unit": "celsius",
-    "gpu_temperature_unit": "celsius"
+    "gpu_temperature_unit": "celsius",
 }
