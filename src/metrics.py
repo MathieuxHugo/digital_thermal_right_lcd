@@ -37,9 +37,9 @@ class Metrics:
 
         candidates =  {
             'cpu_temp': [get_cpu_temp_psutils,get_cpu_temp_linux,get_cpu_temp_windows_wmi,get_cpu_temp_windows_wintmp,get_cpu_temp_raspberry_pi],
-            'gpu_temp': [get_gpu_temp_nvidia,get_gpu_temp_wintemp, self.get_gpu_temp_amdgpuinfo],
+            'gpu_temp': [get_gpu_temp_nvidia,get_gpu_temp_wintemp, self.get_gpu_temp_amdgpuinfo, get_gpu_info_system_profiler],
             'cpu_usage': [get_cpu_usage],
-            'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,]
+            'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,get_gpu_info_ioreg]
         }
         for metric, functions in candidates.items():
             for function in functions:
@@ -196,4 +196,29 @@ def get_gpu_usage_nvml():
         finally:
             nvmlShutdown()
     except:
+        return None
+
+def get_gpu_info_system_profiler():
+    """Get GPU information using system_profiler"""
+    try:
+        output = subprocess.check_output([
+            'system_profiler', 'SPDisplaysDataType'
+        ], stderr=subprocess.DEVNULL).decode()
+        # Parse output for GPU details
+        return output
+    except Exception:
+        return None
+
+def get_gpu_info_ioreg():
+    """Get GPU information using ioreg"""
+    try:
+        output = subprocess.check_output([
+            'ioreg', '-l'
+        ], stderr=subprocess.DEVNULL).decode()
+        # Filter for GPU-related information
+        for line in output.split('\n'):
+            if 'GPU' in line or 'graphics' in line.lower():
+                return line
+        return None
+    except Exception:
         return None
