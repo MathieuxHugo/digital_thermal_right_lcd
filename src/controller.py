@@ -143,6 +143,7 @@ class Controller:
     def display_temp_small(self, device='cpu'):
         unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
         self.set_leds(unit[device], 1)
+        self.set_leds(device+'_led', 1)
         current_temp = self.metrics.get_metrics(self.temp_unit)[f"{device}_temp"]
         self.colors = self.metrics_colors
         if current_temp is not None:
@@ -153,7 +154,7 @@ class Controller:
     def display_usage_small(self, device='cpu'):   
         current_usage = self.metrics.get_metrics(self.temp_unit)[f"{device}_usage"]
         self.set_leds('percent_led', 1)
-
+        self.set_leds(device+'_led', 1)
         self.colors = self.metrics_colors
         if current_usage is not None:
             self.set_leds('digit_frame', digit_mask[get_number_array(current_usage, array_length=3, fill_value=0)].flatten())
@@ -306,8 +307,8 @@ class Controller:
                         self.display_temp_small(device='cpu')
                     elif self.cpt < self.cycle_duration:
                         self.display_temp_small(device='gpu')
-                    elif self.cpt < 3*self.cycle_duration/4:
-                        self.display_usage_small(device='gpu')
+                    elif self.cpt < 3*self.cycle_duration/2:
+                        self.display_usage_small(device='cpu')
                     else:
                         self.display_usage_small(device='gpu')
                 elif self.display_mode == "cpu_temp":
