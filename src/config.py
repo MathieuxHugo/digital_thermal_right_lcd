@@ -1,4 +1,6 @@
-leds_indexes = {
+old_layout_mode = {"big": "Pearless Assasin 120", "small": "TR Assassin X 120R"}
+
+pa120_leds_indexes = {# pearless assassin 120 ARGB
     "all": list(range(0, 84)),
     "cpu": list(range(0, 42)),
     "gpu": list(range(42, 84)),
@@ -16,7 +18,22 @@ leds_indexes = {
     "gpu_percent_led": 42,
 }
 
-leds_indexes_small = {
+pa140_leds_indexes = {
+    "percent_led": 0,
+    "usage": list(range(16, 0, -1)),
+    "frequency": list(range(44, 16,-1)),
+    "cpu_led": 53,
+    "gpu_led": 59,
+    "temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
+    "celsius": 68,
+    "fahrenheit": 69,
+    "watt": [74, 75, 76, 73, 70, 71, 72, 81, 82, 83, 80, 77, 78, 79, 88, 89, 90, 87, 84, 85, 86],
+    "watt_led": 91,
+    "frequency_led": 92,
+    "all": list(range(0, 92)),
+}
+
+ax120R_leds_indexes = {# Thermalright Assassin X 120R ARGB
     "all": list(range(0, 31)),
     "digit_frame": [14, 9, 10, 15, 13, 12, 11, 21, 16, 17, 22, 20, 19, 18, 28, 23, 24, 29, 27, 26, 25],
     "celsius": 6,
@@ -26,7 +43,7 @@ leds_indexes_small = {
     "cpu_led": [2, 3],
 }
 
-display_modes = [
+pa120_display_modes = [
     "alternate_time",
     "metrics",
     "time",
@@ -36,7 +53,7 @@ display_modes = [
     "debug_ui",
 ]
 
-display_modes_small = [
+ax120R_display_modes = [
     "alternate_metrics",
     "cpu_temp",
     "gpu_temp",
@@ -45,7 +62,14 @@ display_modes_small = [
     "debug_ui",
 ]
 
-NUMBER_OF_LEDS = 84
+pa140_display_modes = [
+    "gpu",
+    "cpu",
+    "alternate_metrics",
+    "debug_ui",
+]
+
+NUMBER_OF_LEDS = 93
 
 default_config = {
     "display_mode": "alternate_time_with_seconds",

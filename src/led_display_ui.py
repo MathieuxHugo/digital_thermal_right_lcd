@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import leds_indexes, leds_indexes_small, NUMBER_OF_LEDS, display_modes, default_config, display_modes_small
+from config import pa120_leds_indexes, ax120R_leds_indexes, pa140_leds_indexes, NUMBER_OF_LEDS, pa140_display_modes, pa120_display_modes, default_config, ax120R_display_modes, old_layout_mode
 import numpy as np
 import threading
 import time
@@ -25,7 +25,6 @@ segmented_digit_layout = {# Position segments in a 7-segment layout
         {"row":3, "column":2, "padx":2, "pady":0, "orientation": "Vertical"},
 }
 
-
 class LEDDisplayUI:
     def __init__(self, root, config_path="config.json"):
         self.root = root
@@ -33,13 +32,16 @@ class LEDDisplayUI:
         self.config = self.load_config()
         self.root.title("LED Display Layout")
         self.style = ttk.Style()
-        self.leds_indexes = leds_indexes
+        self.leds_indexes = pa120_leds_indexes
         # Layout mode selection
-        self.layout_mode = tk.StringVar(value=self.config.get("layout_mode", "big"))
+        self.layout_mode = tk.StringVar(value=self.config.get("layout_mode", "Pearless Assasin 120"))
+        #Retro compatibility
+        if self.layout_mode.get() in old_layout_mode:
+            self.layout_mode.set(old_layout_mode[self.layout_mode.get()])
         layout_mode_frame = ttk.LabelFrame(root, text="Choose layout mode:", padding=(10, 10))
         layout_mode_frame.grid(row=0, column=0, pady=10)
         layout_dropdown = ttk.Combobox(layout_mode_frame, textvariable=self.layout_mode, state="readonly")
-        layout_dropdown["values"] = ["big", "small"]
+        layout_dropdown["values"] = ["Pearless Assasin 120", "TR Assassin X 120R", "Pearless assasin 140"]
         layout_dropdown.grid(row=0, column=0, padx=5, pady=5)
         layout_dropdown.bind("<<ComboboxSelected>>", lambda e: self.change_layout_mode())
 
@@ -64,7 +66,7 @@ class LEDDisplayUI:
         )
         reset_button.grid(row=2, column=0, padx=10, pady=10, columnspan=2)
 
-    def create_big_layout(self):
+    def create_pa120_layout(self):
         # Clear previous layout
         for widget in self.layout_frame.winfo_children():
             widget.destroy()
@@ -79,7 +81,7 @@ class LEDDisplayUI:
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
-        self.create_display_mode(display_frame, display_modes)
+        self.create_display_mode(display_frame, pa120_display_modes)
 
         # Create frames for CPU and GPU
         self.cpu_frame = self.create_device_frame(led_frame, "cpu", 1)
@@ -88,7 +90,7 @@ class LEDDisplayUI:
         # Add controls for group selection and color change
         self.create_controls(led_frame)
 
-    def create_small_layout(self):
+    def create_ax120R_layout(self):
         # Clear previous layout
         for widget in self.layout_frame.winfo_children():
             widget.destroy()
@@ -103,7 +105,7 @@ class LEDDisplayUI:
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_display_mode(display_frame, display_modes_small)
+        self.create_display_mode(display_frame, ax120R_display_modes)
 
         # Device LED labels in row 1
         device_led_frame = ttk.Frame(led_frame)
@@ -131,22 +133,90 @@ class LEDDisplayUI:
         # Add controls for group selection and color change in row 3
         self.create_controls(led_frame, row=3)
 
+    def create_pa140_layout(self):
+        # Clear previous layout
+        for widget in self.layout_frame.winfo_children():
+            widget.destroy()
+
+        self.number_of_leds = NUMBER_OF_LEDS
+        self.leds_ui = np.array([None] * self.number_of_leds)
+
+        led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
+        led_frame.grid(row=0, column=0, padx=10, pady=10)
+
+        # Display controls at the top (row 0)
+        display_frame = ttk.Frame(led_frame, padding=(10, 10))
+        display_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.create_display_mode(display_frame, pa140_display_modes)
+
+        device_frame = ttk.Frame(led_frame)
+        device_frame.grid(row=1, column=0, padx=5, pady=5)
+        self.create_label(device_frame, "cpu_led", "CPU", 0, 0, padx=5)
+        self.create_label(device_frame, "gpu_led", "GPU", 0, 2, padx=5)
+
+
+        # Temperature display (3-digit + °C)
+        temp_frame = ttk.LabelFrame(led_frame, text="Temperature", padding=(10, 10))
+        temp_frame.grid(row=2, column=0)
+        temp_digit_frame = ttk.Frame(temp_frame)
+        temp_digit_frame.grid(row=0, column=0, padx=5, pady=5)
+        self.create_segmented_digit_layout(temp_digit_frame, "temp", number_of_digits=3)
+        unit_frame = ttk.Frame(temp_frame)
+        unit_frame.grid(row=0, column=1, padx=5, pady=5)
+        self.create_label(unit_frame, "celsius", "°C", 0, 0)
+        self.create_label(unit_frame, "fahrenheit", "°F", 1, 0)
+
+        # Power consumption display (3 digits + W)
+        power_frame = ttk.LabelFrame(led_frame, text="Power Consumption", padding=(10, 10))
+        power_frame.grid(row=2, column=1)
+        power_digit_frame = ttk.Frame(power_frame)
+        power_digit_frame.grid(row=0, column=0, padx=5, pady=5)
+        self.create_segmented_digit_layout(power_digit_frame, "watt", number_of_digits=3)
+        power_unit_frame = ttk.Frame(power_frame)
+        power_unit_frame.grid(row=0, column=1, padx=5, pady=5)
+        self.create_label(power_unit_frame, "watt_led", "W", 0, 0)
+
+        # Clock speed display (4 digits + MHz)
+        clock_frame = ttk.LabelFrame(led_frame, text="Clock Frequency", padding=(10, 10))
+        clock_frame.grid(row=3, column=0)
+        clock_digit_frame = ttk.Frame(clock_frame)
+        clock_digit_frame.grid(row=0, column=0, padx=5, pady=5)
+        self.create_segmented_digit_layout(clock_digit_frame, "frequency", number_of_digits=4) 
+        frequency_unit_frame = ttk.Frame(clock_frame)
+        frequency_unit_frame.grid(row=0, column=1, padx=5, pady=5)
+        self.create_label(frequency_unit_frame, "frequency_led", "MHz", 0, 0)
+
+        # Usage percentage display (2 digits + %)
+        usage_frame = ttk.LabelFrame(led_frame, text="Usage Percentage", padding=(10, 10))
+        usage_frame.grid(row=3, column=1)
+        self.create_usage_frame(usage_frame, "usage")
+        self.create_label(usage_frame, "percent_led", "%", 1, 5)
+
+        self.config_frame = self.create_config_panel(self.layout_frame)
+        self.create_controls(led_frame, row=4)
 
     def change_layout_mode(self):
-        if self.layout_mode.get() == "big":
-            self.leds_indexes = leds_indexes
-            self.config["layout_mode"] = "big"
-            if self.config["display_mode"] not in display_modes:
-                print(f"Warning: Display mode {self.config['display_mode']} not compatible with big layout, switching to metrics.")
+        if self.layout_mode.get() == "Pearless Assasin 120":
+            self.leds_indexes = pa120_leds_indexes
+            self.config["layout_mode"] = "Pearless Assasin 120"
+            if self.config["display_mode"] not in pa120_display_modes:
+                print(f"Warning: Display mode {self.config['display_mode']} not compatible with Pearless Assasin 120 layout, switching to metrics.")
                 self.config["display_mode"] = "metrics"
-            self.create_big_layout()
-        else:
-            self.config["layout_mode"] = "small"
-            if self.config["display_mode"] not in display_modes_small:
-                print(f"Warning: Display mode {self.config['display_mode']} not compatible with small layout, switching to alternate metrics.")
+            self.create_pa120_layout()
+        elif self.layout_mode.get() == "TR Assassin X 120R":
+            self.leds_indexes = ax120R_leds_indexes
+            self.config["layout_mode"] = "TR Assassin X 120R"
+            if self.config["display_mode"] not in ax120R_display_modes:
+                print(f"Warning: Display mode {self.config['display_mode']} not compatible with TR Assassin X 120R layout, switching to alternate metrics.")
                 self.config["display_mode"] = "alternate_metrics"
-            self.leds_indexes = leds_indexes_small
-            self.create_small_layout()
+            self.create_ax120R_layout()
+        else: # Pearless assasin 140
+            self.leds_indexes = pa140_leds_indexes
+            self.config["layout_mode"] = "Pearless assasin 140"
+            if self.config["display_mode"] not in pa140_display_modes:
+                print(f"Warning: Display mode {self.config['display_mode']} not compatible with Pearless assasin 140 layout, switching to cpu.")
+                self.config["display_mode"] = "cpu"
+            self.create_pa140_layout()
         self.write_config()
 
     def set_default_config(self):
@@ -195,7 +265,7 @@ class LEDDisplayUI:
             return self.leds_indexes[led_key][index]
 
     def get_color_key(self):
-        if self.layout_mode.get() == "big":
+        if self.layout_mode.get() == "Pearless Assasin 120":
             return self.color_mode.get()
         else:
             return "metrics"
@@ -253,10 +323,10 @@ class LEDDisplayUI:
         self.create_label(frame, device_name+"_percent_led", "%", 1, 3)
         return frame
 
-    def create_label(self, parent_frame, led_key, text, row, column, index=None):
+    def create_label(self, parent_frame, led_key, text, row, column, index=None, padx=0):
         unit_style = {"font": ("Arial", 20), "cursor": "hand2"}
         label = ttk.Label(parent_frame, text=text, **unit_style)
-        label.grid(row=row, column=column, padx=0, pady=5)
+        label.grid(row=row, column=column, padx=padx, pady=5)
         label.bind(
             "<Button-1>",
             lambda event,

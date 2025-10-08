@@ -1,6 +1,6 @@
 import numpy as np
 from metrics import Metrics
-from config import leds_indexes, NUMBER_OF_LEDS, leds_indexes_small, display_modes, display_modes_small
+from config import pa120_leds_indexes, NUMBER_OF_LEDS, ax120R_leds_indexes, pa120_display_modes, ax120R_display_modes
 from utils import interpolate_color, get_random_color
 import hid
 import time
@@ -25,6 +25,23 @@ digit_mask = np.array(
         [0, 0, 0, 0, 0, 0, 0],  # nothing
     ]
 )
+
+ps120_digit_mask = np.array(
+    [
+        [1, 1, 1, 0, 1, 1, 1],  # 0
+        [0, 0, 1, 0, 0, 0, 1],  # 1
+        [1, 1, 0, 1, 0, 1, 1],  # 2
+        [0, 1, 1, 1, 0, 1, 1],  # 3
+        [0, 0, 1, 1, 1, 0, 1],  # 4
+        [0, 1, 1, 1, 1, 1, 0],  # 5
+        [1, 1, 1, 1, 1, 1, 0],  # 6
+        [0, 0, 1, 0, 0, 1, 1],  # 7
+        [1, 1, 1, 1, 1, 1, 1],  # 8
+        [0, 1, 1, 1, 1, 1, 1],  # 9
+        [0, 0, 0, 0, 0, 0, 0],  # nothing
+    ]
+)
+
 
 letter_mask = {
     'H': [1, 0, 1, 1, 1, 0, 1],
@@ -59,7 +76,7 @@ class Controller:
         self.dev = self.get_device()
         self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
         self.leds = np.array([0] * NUMBER_OF_LEDS)
-        self.leds_indexes = leds_indexes
+        self.leds_indexes = pa120_leds_indexes
         # Configurable config path
         if config_path is None:
             self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
@@ -233,13 +250,13 @@ class Controller:
             self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
             self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
             if self.config.get('layout_mode', 'big')== 'small':
-                self.leds_indexes = leds_indexes_small
-                if self.display_mode not in display_modes_small:
+                self.leds_indexes = ax120R_leds_indexes
+                if self.display_mode not in ax120R_display_modes:
                     print(f"Warning: Display mode {self.display_mode} not compatible with small layout, switching to alternate metrics.")
                     self.display_mode = "alternate_metrics"
             else:
-                self.leds_indexes = leds_indexes
-                if self.display_mode not in display_modes:
+                self.leds_indexes = pa120_leds_indexes
+                if self.display_mode not in pa120_display_modes:
                     print(f"Warning: Display mode {self.display_mode} not compatible with big layout, switching to metrics.")
                     self.display_mode = "metrics"
         else:
@@ -263,7 +280,7 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
-            self.leds_indexes = leds_indexes
+            self.leds_indexes = pa120_leds_indexes
         
 
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
