@@ -72,11 +72,16 @@ class BaseDisplayer:
             return
         if temperature < 1000:
             arr = self.digit_mask[self.get_number_array(temperature)].flatten()
+            # try device-specific key first, fall back to generic keys
             self._set_leds(leds, device + '_temp', arr)
+            # device-specific unit leds
             if unit == "celsius":
                 self._set_leds(leds, device + '_celsius', 1)
+                # fallback generic
+                self._set_leds(leds, 'celsius', 1)
             elif unit == "fahrenheit":
                 self._set_leds(leds, device + '_fahrenheit', 1)
+                self._set_leds(leds, 'fahrenheit', 1)
         else:
             raise Exception("The numbers displayed on the temperature LCD must be less than 1000")
 
@@ -85,10 +90,31 @@ class BaseDisplayer:
             return
         if usage < 200:
             arr = np.concatenate(([int(usage >= 100)] * 2, self.digit_mask[self.get_number_array(usage, array_length=2)].flatten()))
+            # try device-specific usage first, fallback handled inside _set_leds
             self._set_leds(leds, device + '_usage', arr)
+            # try device specific percent led and generic percent led
             self._set_leds(leds, device + '_percent_led', 1)
+            self._set_leds(leds, 'percent_led', 1)
         else:
             raise Exception("The numbers displayed on the usage LCD must be less than 200")
+
+    def set_frequency(self, leds, frequency: int):
+        """Display frequency on the 4-digit frequency field and light the frequency unit LED."""
+        if frequency is None:
+            return
+        # frequency displayed on 4 digits (4 * 7 = 28 LEDs)
+        arr = self.digit_mask[self.get_number_array(frequency, array_length=4)].flatten()
+        self._set_leds(leds, 'frequency', arr)
+        # light the frequency unit led if present
+        self._set_leds(leds, 'frequency_led', 1)
+
+    def set_power(self, leds, power: int):
+        """Display power (watts) on the 3-digit watt field and light the watt unit LED."""
+        if power is None:
+            return
+        arr = self.digit_mask[self.get_number_array(power, array_length=3)].flatten()
+        self._set_leds(leds, 'watt', arr)
+        self._set_leds(leds, 'watt_led', 1)
 
     def clamp_metric_factor(self, metric, value):
         # compute factor between min and max for color interpolation logic used by controller.get_config_colors
@@ -275,28 +301,47 @@ class PA140Displayer(BaseDisplayer):
         metrics_vals = self.metrics.get_metrics(self.temp_unit)
 
         def apply_device_block(device):
-            # Simplified PA140 display: light up device led and show usage bar
-            self._set_leds(leds, device + '_led', 1)
+            # Use the common helpers for PA140
+            # light device indicator
+            try:
+                self._set_leds(leds, device + '_led', 1)
+            except Exception:
+                pass
+
+            # usage bar
             usage = metrics_vals.get(f"{device}_usage")
             if usage is not None:
-                # map usage to number of leds in 'usage' bar
                 try:
-                    idxs = self.leds_indexes['usage']
-                    length = len(idxs)
-                    on = int((usage / 100.0) * length)
-                    # set the last `on` leds as lit (indexes already reversed in config)
-                    bar = np.array([1] * on + [0] * (length - on))
-                    self._set_leds(leds, 'usage', bar)
-                    self._set_leds(leds, 'percent_led', 1)
+                    # reuse set_usage which will try device-specific or generic keys
+                    self.set_usage(leds, usage, device=device)
                 except Exception:
                     pass
-            # temperature as a simple indicator: light celsius/fahrenheit led
+
+            # temperature
             temp = metrics_vals.get(f"{device}_temp")
             if temp is not None:
-                if self.temp_unit[device] == 'celsius':
-                    self._set_leds(leds, 'celsius', 1)
-                else:
-                    self._set_leds(leds, 'fahrenheit', 1)
+                try:
+                    # reuse set_temp which will try device-specific or generic unit leds
+                    self.set_temp(leds, temp, device=device, unit=self.temp_unit[device])
+                except Exception:
+                    pass
+
+            # frequency (4 digits)
+            freq = metrics_vals.get(f"{device}_frequency")
+            if freq is not None:
+                try:
+                    self.set_frequency(leds, freq)
+                except Exception:
+                    pass
+
+            # power (3 digits)
+            power = metrics_vals.get(f"{device}_power")
+            if power is not None:
+                try:
+                    self.set_power(leds, power)
+                except Exception:
+                    pass
+
             # apply colors for the device area
             try:
                 colors[self.leds_indexes['all']] = self.metrics_colors[self.leds_indexes['all']]

@@ -1,5 +1,5 @@
 {
-    "display_mode": "debug_ui",
+    "display_mode": "gpu",
     "metrics": {
         "colors": [
             "00ffd9-ffeb41",
