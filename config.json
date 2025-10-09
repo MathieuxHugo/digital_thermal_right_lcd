@@ -5,7 +5,7 @@
             "ff0000",
             "ffff00",
             "ff0000",
-            "00d9d9",
+            "d900d9",
             "ff0000",
             "ff0000",
             "0000ff",
@@ -71,7 +71,7 @@
             "c16cff",
             "ff0000",
             "ff0000",
-            "ff0000",
+            "000000",
             "ffffff",
             "ff0000",
             "ff0000",
@@ -93,7 +93,7 @@
             "ff0000",
             "ffff00",
             "ff0000",
-            "ff0000",
+            "d90000",
             "00ff00"
         ]
     },
@@ -205,5 +205,5 @@
     "vendor_id": "0x0416",
     "cpu_temperature_unit": "celsius",
     "gpu_temperature_unit": "celsius",
-    "layout_mode": "Pearless assasin 140"
+    "layout_mode": "Pearless Assasin 120"
 }

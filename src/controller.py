@@ -1,6 +1,7 @@
 import numpy as np
 from metrics import Metrics
-from config import pa120_leds_indexes, NUMBER_OF_LEDS, ax120R_leds_indexes, pa120_display_modes, ax120R_display_modes
+from config import NUMBER_OF_LEDS
+from device_configurations import get_device_config
 from utils import interpolate_color, get_random_color
 import hid
 import time
@@ -26,28 +27,9 @@ digit_mask = np.array(
     ]
 )
 
-ps120_digit_mask = np.array(
-    [
-        [1, 1, 1, 0, 1, 1, 1],  # 0
-        [0, 0, 1, 0, 0, 0, 1],  # 1
-        [1, 1, 0, 1, 0, 1, 1],  # 2
-        [0, 1, 1, 1, 0, 1, 1],  # 3
-        [0, 0, 1, 1, 1, 0, 1],  # 4
-        [0, 1, 1, 1, 1, 1, 0],  # 5
-        [1, 1, 1, 1, 1, 1, 0],  # 6
-        [0, 0, 1, 0, 0, 1, 1],  # 7
-        [1, 1, 1, 1, 1, 1, 1],  # 8
-        [0, 1, 1, 1, 1, 1, 1],  # 9
-        [0, 0, 0, 0, 0, 0, 0],  # nothing
-    ]
-)
-
-
 letter_mask = {
     'H': [1, 0, 1, 1, 1, 0, 1],
 }
-
-
 
 def _number_to_array(number):
     if number>=10:
@@ -76,7 +58,8 @@ class Controller:
         self.dev = self.get_device()
         self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
         self.leds = np.array([0] * NUMBER_OF_LEDS)
-        self.leds_indexes = pa120_leds_indexes
+        # default to PA120 configuration until config is loaded
+        self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
         # Configurable config path
         if config_path is None:
             self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
@@ -157,7 +140,7 @@ class Controller:
         self.set_leds('cpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
         self.colors = self.time_colors
 
-    def display_temp_small(self, device='cpu'):
+    def display_temp_ax120R(self, device='cpu'):
         unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
         self.set_leds(unit[device], 1)
         self.set_leds(device+'_led', 1)
@@ -168,7 +151,7 @@ class Controller:
         else:
             print(f"Warning: {device} temperature not available.")
     
-    def display_usage_small(self, device='cpu'):   
+    def display_usage_ax120R(self, device='cpu'):   
         current_usage = self.metrics.get_metrics(self.temp_unit)[f"{device}_usage"]
         self.set_leds('percent_led', 1)
         self.set_leds(device+'_led', 1)
@@ -249,16 +232,19 @@ class Controller:
             self.update_interval = self.config.get('update_interval', 0.1)
             self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
             self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
-            if self.config.get('layout_mode', 'big')== 'small':
-                self.leds_indexes = ax120R_leds_indexes
-                if self.display_mode not in ax120R_display_modes:
-                    print(f"Warning: Display mode {self.display_mode} not compatible with small layout, switching to alternate metrics.")
-                    self.display_mode = "alternate_metrics"
-            else:
-                self.leds_indexes = pa120_leds_indexes
-                if self.display_mode not in pa120_display_modes:
-                    print(f"Warning: Display mode {self.display_mode} not compatible with big layout, switching to metrics.")
-                    self.display_mode = "metrics"
+            # Use device_configurations to obtain leds_indexes and supported display modes
+            layout_name = self.config.get('layout_mode', 'Pearless Assasin 120')
+            device_conf = get_device_config(layout_name)
+            self.leds_indexes = device_conf.leds_indexes
+            if self.display_mode not in device_conf.display_modes:
+                print(f"Warning: Display mode {self.display_mode} not compatible with {layout_name} layout, switching to a compatible mode.")
+                # Prefer 'metrics' or 'alternate_metrics' if available, otherwise pick the first supported mode
+                if 'metrics' in device_conf.display_modes:
+                    self.display_mode = 'metrics'
+                elif 'alternate_metrics' in device_conf.display_modes:
+                    self.display_mode = 'alternate_metrics'
+                else:
+                    self.display_mode = device_conf.display_modes[0]
         else:
             VENDOR_ID = 0x0416
             PRODUCT_ID = 0x8001
@@ -280,8 +266,8 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
-            self.leds_indexes = pa120_leds_indexes
-        
+            self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
+        # Note: leds_indexes may have been updated above using device_configurations
 
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
             print(f"Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
@@ -321,21 +307,21 @@ class Controller:
                         self.display_metrics()
                 elif self.display_mode == "alternate_metrics":
                     if self.cpt < self.cycle_duration/2:
-                        self.display_temp_small(device='cpu')
+                        self.display_temp_ax120R(device='cpu')
                     elif self.cpt < self.cycle_duration:
-                        self.display_temp_small(device='gpu')
+                        self.display_temp_ax120R(device='gpu')
                     elif self.cpt < 3*self.cycle_duration/2:
-                        self.display_usage_small(device='cpu')
+                        self.display_usage_ax120R(device='cpu')
                     else:
-                        self.display_usage_small(device='gpu')
+                        self.display_usage_ax120R(device='gpu')
                 elif self.display_mode == "cpu_temp":
-                    self.display_temp_small(device='cpu')
+                    self.display_temp_ax120R(device='cpu')
                 elif self.display_mode == "gpu_temp":
-                    self.display_temp_small(device='gpu')
+                    self.display_temp_ax120R(device='gpu')
                 elif self.display_mode == "cpu_usage":
-                    self.display_usage_small(device='cpu')
+                    self.display_usage_ax120R(device='cpu')
                 elif self.display_mode == "gpu_usage":
-                    self.display_usage_small(device='gpu')
+                    self.display_usage_ax120R(device='gpu')
                 elif self.display_mode == "debug_ui":
                     self.colors = self.metrics_colors
                     self.leds[:] = 1

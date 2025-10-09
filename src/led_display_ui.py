@@ -2,7 +2,8 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import pa120_leds_indexes, ax120R_leds_indexes, pa140_leds_indexes, NUMBER_OF_LEDS, pa140_display_modes, pa120_display_modes, default_config, ax120R_display_modes, old_layout_mode
+from config import NUMBER_OF_LEDS, default_config, old_layout_mode
+from device_configurations import get_device_config, CONFIG_NAMES
 import numpy as np
 import threading
 import time
@@ -32,7 +33,8 @@ class LEDDisplayUI:
         self.config = self.load_config()
         self.root.title("LED Display Layout")
         self.style = ttk.Style()
-        self.leds_indexes = pa120_leds_indexes
+        # default to PA120 configuration until config is loaded
+        self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
         # Layout mode selection
         self.layout_mode = tk.StringVar(value=self.config.get("layout_mode", "Pearless Assasin 120"))
         #Retro compatibility
@@ -41,7 +43,7 @@ class LEDDisplayUI:
         layout_mode_frame = ttk.LabelFrame(root, text="Choose layout mode:", padding=(10, 10))
         layout_mode_frame.grid(row=0, column=0, pady=10)
         layout_dropdown = ttk.Combobox(layout_mode_frame, textvariable=self.layout_mode, state="readonly")
-        layout_dropdown["values"] = ["Pearless Assasin 120", "TR Assassin X 120R", "Pearless assasin 140"]
+        layout_dropdown["values"] = CONFIG_NAMES
         layout_dropdown.grid(row=0, column=0, padx=5, pady=5)
         layout_dropdown.bind("<<ComboboxSelected>>", lambda e: self.change_layout_mode())
 
@@ -81,7 +83,7 @@ class LEDDisplayUI:
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
-        self.create_display_mode(display_frame, pa120_display_modes)
+        self.create_display_mode(display_frame, get_device_config('Pearless Assasin 120').display_modes)
 
         # Create frames for CPU and GPU
         self.cpu_frame = self.create_device_frame(led_frame, "cpu", 1)
@@ -105,7 +107,7 @@ class LEDDisplayUI:
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_display_mode(display_frame, ax120R_display_modes)
+        self.create_display_mode(display_frame, get_device_config('TR Assassin X 120R').display_modes)
 
         # Device LED labels in row 1
         device_led_frame = ttk.Frame(led_frame)
@@ -147,7 +149,7 @@ class LEDDisplayUI:
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_display_mode(display_frame, pa140_display_modes)
+        self.create_display_mode(display_frame, get_device_config('Pearless Assasin 140').display_modes)
 
         device_frame = ttk.Frame(led_frame)
         device_frame.grid(row=1, column=0, padx=5, pady=5)
@@ -196,26 +198,25 @@ class LEDDisplayUI:
         self.create_controls(led_frame, row=4)
 
     def change_layout_mode(self):
-        if self.layout_mode.get() == "Pearless Assasin 120":
-            self.leds_indexes = pa120_leds_indexes
-            self.config["layout_mode"] = "Pearless Assasin 120"
-            if self.config["display_mode"] not in pa120_display_modes:
-                print(f"Warning: Display mode {self.config['display_mode']} not compatible with Pearless Assasin 120 layout, switching to metrics.")
-                self.config["display_mode"] = "metrics"
+        layout_name = self.layout_mode.get()
+        device_conf = get_device_config(layout_name)
+        self.leds_indexes = device_conf.leds_indexes
+        self.config["layout_mode"] = layout_name
+        if self.config["display_mode"] not in device_conf.display_modes:
+            print(f"Warning: Display mode {self.config['display_mode']} not compatible with {layout_name} layout, switching to a compatible mode.")
+            if 'metrics' in device_conf.display_modes:
+                self.config["display_mode"] = 'metrics'
+            elif 'alternate_metrics' in device_conf.display_modes:
+                self.config["display_mode"] = 'alternate_metrics'
+            else:
+                self.config["display_mode"] = device_conf.display_modes[0]
+        # Call the correct create_* layout function
+        if layout_name == 'Pearless Assasin 120':
             self.create_pa120_layout()
-        elif self.layout_mode.get() == "TR Assassin X 120R":
-            self.leds_indexes = ax120R_leds_indexes
-            self.config["layout_mode"] = "TR Assassin X 120R"
-            if self.config["display_mode"] not in ax120R_display_modes:
-                print(f"Warning: Display mode {self.config['display_mode']} not compatible with TR Assassin X 120R layout, switching to alternate metrics.")
-                self.config["display_mode"] = "alternate_metrics"
+        elif layout_name == 'TR Assassin X 120R':
             self.create_ax120R_layout()
-        else: # Pearless assasin 140
-            self.leds_indexes = pa140_leds_indexes
-            self.config["layout_mode"] = "Pearless assasin 140"
-            if self.config["display_mode"] not in pa140_display_modes:
-                print(f"Warning: Display mode {self.config['display_mode']} not compatible with Pearless assasin 140 layout, switching to cpu.")
-                self.config["display_mode"] = "cpu"
+        else:
+            # default to PA140 layout for any other name
             self.create_pa140_layout()
         self.write_config()
 
