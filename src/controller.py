@@ -3,6 +3,7 @@ from metrics import Metrics
 from config import NUMBER_OF_LEDS
 from device_configurations import get_device_config
 from utils import interpolate_color, get_random_color
+from displayer import PA120Displayer, PA140Displayer, AX120RDisplayer
 import hid
 import time
 import datetime 
@@ -245,6 +246,19 @@ class Controller:
                     self.display_mode = 'alternate_metrics'
                 else:
                     self.display_mode = device_conf.display_modes[0]
+            # instantiate the proper displayer for this layout
+            if isinstance(device_conf, type) and hasattr(device_conf, 'leds_indexes'):
+                # device_conf is a class instance returned by get_device_config
+                pass
+            if layout_name == 'Pearless Assasin 120':
+                self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
+            elif layout_name == 'Pearless Assasin 140':
+                self.displayer = PA140Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
+            elif layout_name == 'TR Assassin X 120R':
+                self.displayer = AX120RDisplayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
+            else:
+                # fallback
+                self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
         else:
             VENDOR_ID = 0x0416
             PRODUCT_ID = 0x8001
@@ -267,10 +281,12 @@ class Controller:
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
             self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
+            # default displayer
+            self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
         # Note: leds_indexes may have been updated above using device_configurations
 
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
-            print(f"Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
+            print("Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
             self.VENDOR_ID = VENDOR_ID
             self.PRODUCT_ID = PRODUCT_ID
             self.dev = self.get_device()
@@ -283,51 +299,18 @@ class Controller:
                 print("No device found, with VENDOR_ID: {}, PRODUCT_ID: {}".format(self.VENDOR_ID, self.PRODUCT_ID))
                 time.sleep(5)
             else:
-                if self.display_mode == "alternate_time":
-                    if self.cpt < self.cycle_duration:
-                        self.display_time()
-                        self.display_metrics(devices=['gpu'])
-                    else:
-                        self.display_time(device="gpu")
-                        self.display_metrics(devices=['cpu'])
-                elif self.display_mode == "metrics":
-                    self.display_metrics(devices=["cpu", "gpu"])
-                elif self.display_mode == "time":
-                    self.display_time_with_seconds()
-                elif self.display_mode == "time_cpu":
-                    self.display_time(device="gpu")
-                    self.display_metrics(devices=['cpu'])
-                elif self.display_mode == "time_gpu":
-                    self.display_time()
-                    self.display_metrics(devices=['gpu'])
-                elif self.display_mode == "alternate_time_with_seconds":
-                    if self.cpt < self.cycle_duration:
-                        self.display_time_with_seconds()
-                    else:
-                        self.display_metrics()
-                elif self.display_mode == "alternate_metrics":
-                    if self.cpt < self.cycle_duration/2:
-                        self.display_temp_ax120R(device='cpu')
-                    elif self.cpt < self.cycle_duration:
-                        self.display_temp_ax120R(device='gpu')
-                    elif self.cpt < 3*self.cycle_duration/2:
-                        self.display_usage_ax120R(device='cpu')
-                    else:
-                        self.display_usage_ax120R(device='gpu')
-                elif self.display_mode == "cpu_temp":
-                    self.display_temp_ax120R(device='cpu')
-                elif self.display_mode == "gpu_temp":
-                    self.display_temp_ax120R(device='gpu')
-                elif self.display_mode == "cpu_usage":
-                    self.display_usage_ax120R(device='cpu')
-                elif self.display_mode == "gpu_usage":
-                    self.display_usage_ax120R(device='gpu')
-                elif self.display_mode == "debug_ui":
-                    self.colors = self.metrics_colors
-                    self.leds[:] = 1
-                else:
-                    print(f"Unknown display mode: {self.display_mode}")
-                
+                # Delegate the per-layout display construction to the displayer
+                try:
+                    leds_mask, colors = self.displayer.get_state(self.display_mode, self.cpt)
+                    # ensure arrays are numpy arrays of correct length
+                    self.leds = np.array(leds_mask, dtype=int)
+                    self.colors = np.array(colors)
+                except Exception as e:
+                    print(f"Error generating display state: {e}")
+                    # fallback to blank
+                    self.leds = np.array([0] * NUMBER_OF_LEDS)
+                    self.colors = np.array(["000000"] * NUMBER_OF_LEDS)
+
                 self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
                 self.send_packets()
             time.sleep(self.update_interval)

@@ -39,13 +39,13 @@ class PA140Config():
         "watt": [74, 75, 76, 73, 70, 71, 72, 81, 82, 83, 80, 77, 78, 79, 88, 89, 90, 87, 84, 85, 86],
         "watt_led": 91,
         "frequency_led": 92,
-        "all": list(range(0, 92)),
+        "all": list(range(0, 93)),
     }
 
     display_modes = [
         "gpu",
         "cpu",
-        "alternate_metrics",
+        "alternate_devices",
         "debug_ui",
     ]
 class AX120RConfig():
