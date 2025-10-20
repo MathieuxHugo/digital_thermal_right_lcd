@@ -254,11 +254,45 @@ class LEDDisplayUI:
     def load_config(self):
         try:
             with open(self.config_path, 'r') as f:
-                return json.load(f)
+                config = json.load(f)
         except Exception as e:
             print(f"Error loading config: {e}")
-            return None
-        
+            # Fall back to defaults if available
+            try:
+                config = default_config.copy()
+            except Exception:
+                config = {}
+
+        # Enforce that every colors list matches the NUMBER_OF_LEDS constant
+        expected_led_count = NUMBER_OF_LEDS
+
+        for key, val in list(config.items()):
+            if isinstance(val, dict):
+                colors = val.get("colors")
+                if isinstance(colors, list):
+                    current_len = len(colors)
+                    if current_len != expected_led_count:
+                        # Resize: pad with last color or 'ffffff' if empty, or truncate if too long
+                        if current_len == 0:
+                            fill_color = "ffffff"
+                            resized = [fill_color] * expected_led_count
+                        elif current_len < expected_led_count:
+                            last = colors[-1] if colors else "ffffff"
+                            resized = colors + [last] * (expected_led_count - current_len)
+                        else:
+                            resized = colors[:expected_led_count]
+
+                        config[key]["colors"] = resized
+                        # Save corrected config immediately
+                        try:
+                            with open(self.config_path, 'w') as f:
+                                json.dump(config, f, indent=4)
+                            print(f"Adjusted colors for '{key}' from {current_len} to {expected_led_count} and saved config.")
+                        except Exception as e:
+                            print(f"Error saving resized config: {e}")
+
+        return config
+
     def get_index(self, led_key, index=None):
         if index is None or isinstance(self.leds_indexes[led_key],int):
             return self.leds_indexes[led_key]
