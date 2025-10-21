@@ -102,66 +102,6 @@ class Controller:
             packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
             self.dev.write(packet)
 
-    def set_temp(self, temperature: int, device='cpu', unit="celsius"):        
-        if temperature < 1000:
-            self.set_leds(device + '_temp', digit_mask[get_number_array(temperature)].flatten())
-            if unit == "celsius":
-                self.set_leds(device + '_celsius', 1)
-            elif unit == "fahrenheit":
-                self.set_leds(device + '_fahrenheit', 1)
-        else:
-            raise Exception("The numbers displayed on the temperature LCD must be less than 1000")
-
-    def set_usage(self, usage : int, device='cpu'):
-        if usage<200:
-            self.set_leds(device+'_usage', np.concatenate(([int(usage>=100)]*2,digit_mask[get_number_array(usage, array_length=2)].flatten())))
-            self.set_leds(device+'_percent_led', 1)
-        else:
-            raise Exception("The numbers displayed on the usage LCD must be less than 200")
-
-    def display_metrics(self, devices=["cpu","gpu"]):
-        self.temp_unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
-        metrics = self.metrics.get_metrics(temp_unit=self.temp_unit)
-        for device in devices:
-            self.set_leds(device+"_led", 1)
-            self.set_temp(metrics[device+"_temp"], device=device, unit=self.temp_unit[device])
-            self.set_usage(metrics[device+"_usage"], device=device)
-            self.colors[self.leds_indexes[device]] = self.metrics_colors[self.leds_indexes[device]]
-
-    def display_time(self, device="cpu"):
-        current_time = datetime.datetime.now()
-        self.set_leds(device+'_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
-        self.set_leds(device+'_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
-        self.colors[self.leds_indexes[device]] = self.time_colors[self.leds_indexes[device]]
-    
-    def display_time_with_seconds(self):
-        current_time = datetime.datetime.now()
-        self.set_leds('cpu_temp', np.concatenate((digit_mask[get_number_array(current_time.hour, array_length=2, fill_value=0)].flatten(),letter_mask["H"])))
-        self.set_leds('gpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.second, array_length=2, fill_value=0)].flatten())))
-        self.set_leds('cpu_usage', np.concatenate(([0,0],digit_mask[get_number_array(current_time.minute, array_length=2, fill_value=0)].flatten())))
-        self.colors = self.time_colors
-
-    def display_temp_ax120R(self, device='cpu'):
-        unit = {device: self.config.get(f"{device}_temperature_unit", "celsius")for device in ["cpu","gpu"]}
-        self.set_leds(unit[device], 1)
-        self.set_leds(device+'_led', 1)
-        current_temp = self.metrics.get_metrics(self.temp_unit)[f"{device}_temp"]
-        self.colors = self.metrics_colors
-        if current_temp is not None:
-            self.set_leds('digit_frame', digit_mask[get_number_array(current_temp, array_length=3, fill_value=0)].flatten())
-        else:
-            print(f"Warning: {device} temperature not available.")
-    
-    def display_usage_ax120R(self, device='cpu'):   
-        current_usage = self.metrics.get_metrics(self.temp_unit)[f"{device}_usage"]
-        self.set_leds('percent_led', 1)
-        self.set_leds(device+'_led', 1)
-        self.colors = self.metrics_colors
-        if current_usage is not None:
-            self.set_leds('digit_frame', digit_mask[get_number_array(current_usage, array_length=3, fill_value=0)].flatten())
-        else:
-            print(f"Warning: {device} usage not available.")
-
     def get_config_colors(self, config, key="metrics"):
         conf_colors = config.get(key, {}).get('colors', ["ffe000"] * NUMBER_OF_LEDS)
         if len(conf_colors) != NUMBER_OF_LEDS:
