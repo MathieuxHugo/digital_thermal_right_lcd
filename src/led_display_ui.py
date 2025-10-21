@@ -68,17 +68,30 @@ class LEDDisplayUI:
         )
         reset_button.grid(row=2, column=0, padx=10, pady=10, columnspan=2)
 
-    def create_pa120_layout(self):
-        # Clear previous layout
+    def clear_layout(self):
+        """Remove widgets from the layout frame."""
         for widget in self.layout_frame.winfo_children():
             widget.destroy()
 
-        self.number_of_leds = NUMBER_OF_LEDS
+    def init_led_ui(self, number_of_leds):
+        """Initialize number_of_leds and leds_ui array."""
+        self.number_of_leds = number_of_leds
         self.leds_ui = np.array([None] * self.number_of_leds)
 
+    def setup_led_frame_and_config(self):
+        """Create and return the common led_frame and ensure config panel exists."""
         led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
         led_frame.grid(row=0, column=0, padx=10, pady=10)
+        # Ensure config panel is always available
         self.config_frame = self.create_config_panel(self.layout_frame)
+        return led_frame
+
+    def create_pa120_layout(self):
+        # Clear previous layout
+        self.clear_layout()
+
+        self.init_led_ui(NUMBER_OF_LEDS)
+        led_frame = self.setup_led_frame_and_config()
 
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
@@ -94,15 +107,10 @@ class LEDDisplayUI:
 
     def create_ax120R_layout(self):
         # Clear previous layout
-        for widget in self.layout_frame.winfo_children():
-            widget.destroy()
+        self.clear_layout()
 
-        self.number_of_leds = 30
-        self.leds_ui = np.array([None] * self.number_of_leds)
-
-        led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
-        led_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.config_frame = self.create_config_panel(self.layout_frame)
+        self.init_led_ui(30)
+        led_frame = self.setup_led_frame_and_config()
 
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
@@ -137,14 +145,10 @@ class LEDDisplayUI:
 
     def create_pa140_layout(self):
         # Clear previous layout
-        for widget in self.layout_frame.winfo_children():
-            widget.destroy()
+        self.clear_layout()
 
-        self.number_of_leds = NUMBER_OF_LEDS
-        self.leds_ui = np.array([None] * self.number_of_leds)
-
-        led_frame = ttk.Frame(self.layout_frame, padding=(10, 10))
-        led_frame.grid(row=0, column=0, padx=10, pady=10)
+        self.init_led_ui(NUMBER_OF_LEDS)
+        led_frame = self.setup_led_frame_and_config()
 
         # Display controls at the top (row 0)
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
@@ -194,7 +198,6 @@ class LEDDisplayUI:
         self.create_usage_frame(usage_frame, "usage")
         self.create_label(usage_frame, "percent_led", "%", 1, 5)
 
-        self.config_frame = self.create_config_panel(self.layout_frame)
         self.create_controls(led_frame, row=4)
 
     def change_layout_mode(self):
