@@ -368,3 +368,38 @@ class PA140Displayer(BaseDisplayer):
             lit = leds.astype(bool)
             colors[lit] = self.metrics_colors[lit]
         return leds, colors
+
+class DisplayerFactory:
+    """Factory that returns a displayer instance. It reuses the existing instance
+    if the layout type hasn't changed; otherwise it creates a new one."""
+    instance = None
+    current_type = None
+
+    @classmethod
+    def get_displayer(cls, layout_name, leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration):
+        # Create new instance only if layout type changed or no instance exists
+        if cls.instance is None or cls.current_type != layout_name:
+            if layout_name == 'Pearless Assasin 120':
+                inst = PA120Displayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
+            elif layout_name == 'Pearless Assasin 140':
+                inst = PA140Displayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
+            elif layout_name == 'TR Assassin X 120R':
+                inst = AX120RDisplayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
+            else:
+                inst = PA120Displayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
+            cls.instance = inst
+            cls.current_type = layout_name
+        else:
+            # Update existing instance's attributes when reusing
+            inst = cls.instance
+            inst.leds_indexes = leds_indexes
+            inst.number_of_leds = number_of_leds
+            inst.metrics = metrics
+            inst.metrics_colors = np.array(metrics_colors)
+            inst.time_colors = np.array(time_colors)
+            inst.temp_unit = temp_unit
+            inst.metrics_min_value = metrics_min_value
+            inst.metrics_max_value = metrics_max_value
+            inst.update_interval = update_interval
+            inst.cycle_duration = cycle_duration
+        return cls.instance

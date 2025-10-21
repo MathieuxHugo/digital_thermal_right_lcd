@@ -3,7 +3,7 @@ from metrics import Metrics
 from config import NUMBER_OF_LEDS
 from device_configurations import get_device_config
 from utils import interpolate_color, get_random_color
-from displayer import PA120Displayer, PA140Displayer, AX120RDisplayer
+from displayer import DisplayerFactory
 import hid
 import time
 import datetime 
@@ -70,6 +70,8 @@ class Controller:
         self.cycle_duration = 50
         self.display_mode = None
         self.colors = np.array(["ffe000"] * NUMBER_OF_LEDS)  # Will be set in update()
+        # Factory to manage displayer creation/reuse
+        self.displayer = None
         self.update()
 
     def load_config(self):
@@ -186,19 +188,21 @@ class Controller:
                     self.display_mode = 'alternate_metrics'
                 else:
                     self.display_mode = device_conf.display_modes[0]
-            # instantiate the proper displayer for this layout
-            if isinstance(device_conf, type) and hasattr(device_conf, 'leds_indexes'):
-                # device_conf is a class instance returned by get_device_config
-                pass
-            if layout_name == 'Pearless Assasin 120':
-                self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
-            elif layout_name == 'Pearless Assasin 140':
-                self.displayer = PA140Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
-            elif layout_name == 'TR Assassin X 120R':
-                self.displayer = AX120RDisplayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
-            else:
-                # fallback
-                self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
+
+            # Use factory to get or reuse appropriate displayer
+            self.displayer = DisplayerFactory.get_displayer(
+                layout_name,
+                self.leds_indexes,
+                NUMBER_OF_LEDS,
+                self.metrics,
+                self.metrics_colors,
+                self.time_colors,
+                self.temp_unit,
+                self.metrics_min_value,
+                self.metrics_max_value,
+                self.update_interval,
+                self.cycle_duration,
+            )
         else:
             VENDOR_ID = 0x0416
             PRODUCT_ID = 0x8001
@@ -221,8 +225,21 @@ class Controller:
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
             self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
-            # default displayer
-            self.displayer = PA120Displayer(self.leds_indexes, NUMBER_OF_LEDS, self.metrics, self.metrics_colors, self.time_colors, self.temp_unit, self.metrics_min_value, self.metrics_max_value, self.update_interval, self.cycle_duration)
+
+            # Use factory for default displayer as well
+            self.displayer = DisplayerFactory.get_displayer(
+                'Pearless Assasin 120',
+                self.leds_indexes,
+                NUMBER_OF_LEDS,
+                self.metrics,
+                self.metrics_colors,
+                self.time_colors,
+                self.temp_unit,
+                self.metrics_min_value,
+                self.metrics_max_value,
+                self.update_interval,
+                self.cycle_duration,
+            )
         # Note: leds_indexes may have been updated above using device_configurations
 
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
