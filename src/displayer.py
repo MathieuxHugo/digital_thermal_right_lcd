@@ -129,6 +129,54 @@ class BaseDisplayer:
             factor = 0
         return factor
 
+    def apply_device_block(self, leds, colors, device, metrics_vals, area_key='digit_frame'):
+        """Common per-device rendering: light indicator, usage, temp, frequency, power and apply area colors."""
+        # light device indicator
+        try:
+            self._set_leds(leds, device + '_led', 1)
+        except Exception:
+            pass
+
+        # usage bar
+        usage = metrics_vals.get(f"{device}_usage")
+        if usage is not None:
+            try:
+                self.set_usage(leds, usage, device=device)
+            except Exception:
+                pass
+
+        # temperature
+        temp = metrics_vals.get(f"{device}_temp")
+        if temp is not None:
+            try:
+                self.set_temp(leds, temp, device=device, unit=self.temp_unit[device])
+            except Exception:
+                pass
+
+        # frequency (4 digits)
+        freq = metrics_vals.get(f"{device}_frequency")
+        if freq is not None:
+            try:
+                self.set_frequency(leds, freq)
+            except Exception:
+                pass
+
+        # power (3 digits)
+        power = metrics_vals.get(f"{device}_power")
+        if power is not None:
+            try:
+                self.set_power(leds, power)
+            except Exception:
+                pass
+
+        # apply colors for the device area
+        try:
+            idxs = self.leds_indexes.get(area_key, None)
+            if idxs is not None:
+                colors[idxs] = self.metrics_colors[idxs]
+        except Exception:
+            pass
+
     def get_state(self, display_mode, cpt):
         # Should be implemented by subclasses
         leds = np.array([0] * self.number_of_leds)
@@ -137,98 +185,80 @@ class BaseDisplayer:
 
 
 class PA120Displayer(BaseDisplayer):
+    def _apply_metrics_for(self, leds, colors, device, metrics_vals):
+        # light device indicator and show metrics for device
+        self._set_leds(leds, device + "_led", 1)
+        self.set_temp(leds, metrics_vals.get(f"{device}_temp"), device=device, unit=self.temp_unit[device])
+        self.set_usage(leds, metrics_vals.get(f"{device}_usage"), device=device)
+        try:
+            colors[self.leds_indexes[device]] = self.metrics_colors[self.leds_indexes[device]]
+        except Exception:
+            pass
+
+    def _apply_time_for(self, leds, colors, device, now):
+        # show hour+H on <device>_temp and minute on <device>_usage
+        temp_key = f"{device}_temp"
+        usage_key = f"{device}_usage"
+        self._set_leds(leds, temp_key, np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
+        self._set_leds(leds, usage_key, np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
+        try:
+            colors[self.leds_indexes[device]] = self.time_colors[self.leds_indexes[device]]
+        except Exception:
+            pass
+
+    def _apply_time_with_seconds(self, leds, colors, now):
+        # show hours+H on cpu_temp, minutes on cpu_usage and seconds on gpu_usage
+        self._set_leds(leds, 'cpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
+        self._set_leds(leds, 'cpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
+        self._set_leds(leds, 'gpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.second, array_length=2, fill_value=0)].flatten())))
+        try:
+            colors[:] = self.time_colors
+        except Exception:
+            pass
+
     def get_state(self, display_mode, cpt):
         leds = np.array([0] * self.number_of_leds)
         colors = np.array(["000000"] * self.number_of_leds)
         metrics_vals = self.metrics.get_metrics(self.temp_unit)
 
-        # helper to apply metrics colors and time colors
-        def apply_metrics_colors_for_device(device):
-            try:
-                colors[self.leds_indexes[device]] = self.metrics_colors[self.leds_indexes[device]]
-            except Exception:
-                pass
+        now = datetime.datetime.now()
 
-        def apply_time_colors_for_device(device):
-            try:
-                colors[self.leds_indexes[device]] = self.time_colors[self.leds_indexes[device]]
-            except Exception:
-                pass
-
+        half = self.cycle_duration
         if display_mode == "metrics":
             for device in ["cpu", "gpu"]:
-                self._set_leds(leds, device + "_led", 1)
-                self.set_temp(leds, metrics_vals.get(f"{device}_temp"), device=device, unit=self.temp_unit[device])
-                self.set_usage(leds, metrics_vals.get(f"{device}_usage"), device=device)
-                apply_metrics_colors_for_device(device)
+                self._apply_metrics_for(leds, colors, device, metrics_vals)
         elif display_mode == "time":
-            now = datetime.datetime.now()
-            self._set_leds(leds, 'cpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-            self._set_leds(leds, 'cpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-            apply_time_colors_for_device('cpu')
+            self._apply_time_with_seconds(leds, colors, now)
         elif display_mode == "time_cpu":
             # time shown on gpu, cpu metrics on cpu
-            now = datetime.datetime.now()
-            self._set_leds(leds, 'gpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-            self._set_leds(leds, 'gpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-            apply_time_colors_for_device('gpu')
-            # cpu metrics
-            self._set_leds(leds, 'cpu_led', 1)
-            self.set_temp(leds, metrics_vals.get("cpu_temp"), device='cpu', unit=self.temp_unit['cpu'])
-            self.set_usage(leds, metrics_vals.get("cpu_usage"), device='cpu')
-            apply_metrics_colors_for_device('cpu')
+            self._apply_time_for(leds, colors, 'gpu', now)
+            self._apply_metrics_for(leds, colors, 'cpu', metrics_vals)
         elif display_mode == "time_gpu":
-            now = datetime.datetime.now()
-            self._set_leds(leds, 'cpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-            self._set_leds(leds, 'cpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-            apply_time_colors_for_device('cpu')
-            # gpu metrics
-            self._set_leds(leds, 'gpu_led', 1)
-            self.set_temp(leds, metrics_vals.get("gpu_temp"), device='gpu', unit=self.temp_unit['gpu'])
-            self.set_usage(leds, metrics_vals.get("gpu_usage"), device='gpu')
-            apply_metrics_colors_for_device('gpu')
+            # time shown on cpu, gpu metrics on gpu
+            self._apply_time_for(leds, colors, 'cpu', now)
+            self._apply_metrics_for(leds, colors, 'gpu', metrics_vals)
         elif display_mode == "alternate_time":
-            # combine time and metrics for the two halves of the cycle
-            half = self.cycle_duration
             if cpt < half:
-                # time (cpu) + metrics gpu
-                now = datetime.datetime.now()
-                self._set_leds(leds, 'cpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-                self._set_leds(leds, 'cpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-                apply_time_colors_for_device('cpu')
-                # gpu metrics
-                self._set_leds(leds, 'gpu_led', 1)
-                self.set_temp(leds, metrics_vals.get("gpu_temp"), device='gpu', unit=self.temp_unit['gpu'])
-                self.set_usage(leds, metrics_vals.get("gpu_usage"), device='gpu')
-                apply_metrics_colors_for_device('gpu')
+                # time on cpu, metrics on gpu
+                self._apply_time_for(leds, colors, 'cpu', now)
+                self._apply_metrics_for(leds, colors, 'gpu', metrics_vals)
             else:
-                now = datetime.datetime.now()
-                self._set_leds(leds, 'gpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-                self._set_leds(leds, 'gpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-                apply_time_colors_for_device('gpu')
-                # cpu metrics
-                self._set_leds(leds, 'cpu_led', 1)
-                self.set_temp(leds, metrics_vals.get("cpu_temp"), device='cpu', unit=self.temp_unit['cpu'])
-                self.set_usage(leds, metrics_vals.get("cpu_usage"), device='cpu')
-                apply_metrics_colors_for_device('cpu')
-        elif display_mode == "time_with_seconds" or display_mode == "alternate_time_with_seconds":
-            # original project used 'time' variants with seconds; mimic a simple behavior
-            now = datetime.datetime.now()
-            # show hours+H on cpu_temp and minutes/seconds on usage fields
-            self._set_leds(leds, 'cpu_temp', np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"])))
-            self._set_leds(leds, 'cpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten())))
-            self._set_leds(leds, 'gpu_usage', np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.second, array_length=2, fill_value=0)].flatten())))
-            colors = self.time_colors
+                # time on gpu, metrics on cpu
+                self._apply_time_for(leds, colors, 'gpu', now)
+                self._apply_metrics_for(leds, colors, 'cpu', metrics_vals)
+        elif display_mode == "alternate_time_with_seconds":
+            if cpt < half:
+                self._apply_time_with_seconds(leds, colors, now)
+            else:
+                for device in ["cpu", "gpu"]:
+                    self._apply_metrics_for(leds, colors, device, metrics_vals)
         elif display_mode == "debug_ui":
             leds[:] = 1
             colors = self.metrics_colors
         else:
             # fallback to showing metrics
             for device in ["cpu", "gpu"]:
-                self._set_leds(leds, device + "_led", 1)
-                self.set_temp(leds, metrics_vals.get(f"{device}_temp"), device=device, unit=self.temp_unit[device])
-                self.set_usage(leds, metrics_vals.get(f"{device}_usage"), device=device)
-                apply_metrics_colors_for_device(device)
+                self._apply_metrics_for(leds, colors, device, metrics_vals)
 
         # if not explicitly set, apply direct color arrays for full-device modes
         if np.array_equal(colors, np.array(["000000"] * self.number_of_leds)):
@@ -249,43 +279,29 @@ class AX120RDisplayer(BaseDisplayer):
             quarter = int(self.cycle_duration / 2)
             if cpt < quarter:
                 device = 'cpu'
-                self.set_temp(leds, metrics_vals.get(f'{device}_temp'), device=device, unit=self.temp_unit[device])
-                self._set_leds(leds, device + '_led', 1)
-                colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+                self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
             elif cpt < quarter * 2:
                 device = 'gpu'
-                self.set_temp(leds, metrics_vals.get(f'{device}_temp'), device=device, unit=self.temp_unit[device])
-                self._set_leds(leds, device + '_led', 1)
-                colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+                self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
             elif cpt < quarter * 3:
                 device = 'cpu'
-                self.set_usage(leds, metrics_vals.get(f'{device}_usage'), device=device)
-                self._set_leds(leds, device + '_led', 1)
-                colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+                self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
             else:
                 device = 'gpu'
-                self.set_usage(leds, metrics_vals.get(f'{device}_usage'), device=device)
-                self._set_leds(leds, device + '_led', 1)
-                colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+                self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
         elif display_mode in ("cpu_temp", "gpu_temp"):
             device = 'cpu' if display_mode == 'cpu_temp' else 'gpu'
-            self.set_temp(leds, metrics_vals.get(f'{device}_temp'), device=device, unit=self.temp_unit[device])
-            self._set_leds(leds, device + '_led', 1)
-            colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+            self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
         elif display_mode in ("cpu_usage", "gpu_usage"):
             device = 'cpu' if display_mode == 'cpu_usage' else 'gpu'
-            self.set_usage(leds, metrics_vals.get(f'{device}_usage'), device=device)
-            self._set_leds(leds, device + '_led', 1)
-            colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+            self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
         elif display_mode == 'debug_ui':
             leds[:] = 1
             colors = self.metrics_colors
         else:
             # default to cpu temp
             device = 'cpu'
-            self.set_temp(leds, metrics_vals.get(f'{device}_temp'), device=device, unit=self.temp_unit[device])
-            self._set_leds(leds, device + '_led', 1)
-            colors[self.leds_indexes.get('digit_frame', [])] = self.metrics_colors[self.leds_indexes.get('digit_frame', [])]
+            self.apply_device_block(leds, colors, device, metrics_vals, area_key='digit_frame')
 
         # apply metrics colors to any lit LEDs if colors still default
         if np.array_equal(colors, np.array(["000000"] * self.number_of_leds)):
@@ -300,69 +316,21 @@ class PA140Displayer(BaseDisplayer):
         colors = np.array(["000000"] * self.number_of_leds)
         metrics_vals = self.metrics.get_metrics(self.temp_unit)
 
-        def apply_device_block(device):
-            # Use the common helpers for PA140
-            # light device indicator
-            try:
-                self._set_leds(leds, device + '_led', 1)
-            except Exception:
-                pass
-
-            # usage bar
-            usage = metrics_vals.get(f"{device}_usage")
-            if usage is not None:
-                try:
-                    # reuse set_usage which will try device-specific or generic keys
-                    self.set_usage(leds, usage, device=device)
-                except Exception:
-                    pass
-
-            # temperature
-            temp = metrics_vals.get(f"{device}_temp")
-            if temp is not None:
-                try:
-                    # reuse set_temp which will try device-specific or generic unit leds
-                    self.set_temp(leds, temp, device=device, unit=self.temp_unit[device])
-                except Exception:
-                    pass
-
-            # frequency (4 digits)
-            freq = metrics_vals.get(f"{device}_frequency")
-            if freq is not None:
-                try:
-                    self.set_frequency(leds, freq)
-                except Exception:
-                    pass
-
-            # power (3 digits)
-            power = metrics_vals.get(f"{device}_power")
-            if power is not None:
-                try:
-                    self.set_power(leds, power)
-                except Exception:
-                    pass
-
-            # apply colors for the device area
-            try:
-                colors[self.leds_indexes['all']] = self.metrics_colors[self.leds_indexes['all']]
-            except Exception:
-                pass
-
         if display_mode == 'gpu':
-            apply_device_block('gpu')
+            self.apply_device_block(leds, colors, 'gpu', metrics_vals, area_key='all')
         elif display_mode == 'cpu':
-            apply_device_block('cpu')
+            self.apply_device_block(leds, colors, 'cpu', metrics_vals, area_key='all')
         elif display_mode == 'alternate_devices':
             half = self.cycle_duration
             if cpt < half:
-                apply_device_block('cpu')
+                self.apply_device_block(leds, colors, 'cpu', metrics_vals, area_key='all')
             else:
-                apply_device_block('gpu')
+                self.apply_device_block(leds, colors, 'gpu', metrics_vals, area_key='all')
         elif display_mode == 'debug_ui':
             leds[:] = 1
             colors = self.metrics_colors
         else:
-            apply_device_block('cpu')
+            self.apply_device_block(leds, colors, 'cpu', metrics_vals, area_key='all')
 
         if np.array_equal(colors, np.array(["000000"] * self.number_of_leds)):
             lit = leds.astype(bool)
