@@ -53,7 +53,7 @@ class Metrics:
             'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
             # try multiple strategies for CPU power: sysfs scanning, RAPL, turbostat
             'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat],
-            'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, self.get_gpu_power_amdgpuinfo],
+            'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, get_gpu_power_nvidia_smi_alt, self.get_gpu_power_amdgpuinfo],
         }
         for metric, functions in candidates.items():
             for function in functions:
@@ -407,3 +407,54 @@ def get_gpu_power_nvidia_smi():
         return int(float(re.sub(r'[^0-9\.]', '', val)))
     except Exception:
         return None
+
+def get_gpu_power_nvidia_smi_alt():
+    """Alternative NVIDIA GPU power retrieval.
+    Tries nvidia-smi with nounits, falls back to standard nvidia-smi parsing, then attempts to read sysfs hwmon entries.
+    Returns watts as int or None.
+    """
+    try:
+        # Prefer nounits format to avoid unit parsing issues
+        output = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'],
+            stderr=subprocess.DEVNULL, timeout=2
+        ).decode().strip()
+        if output:
+            val = output.split('\n')[0].strip()
+            return int(float(re.sub(r'[^0-9\.]', '', val)))
+    except Exception:
+        pass
+
+    try:
+        # Fallback to standard nvidia-smi output (may include " W")
+        output = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader'],
+            stderr=subprocess.DEVNULL, timeout=2
+        ).decode().strip()
+        if output:
+            val = output.split('\n')[0].strip()
+            return int(float(re.sub(r'[^0-9\.]', '', val)))
+    except Exception:
+        pass
+
+    try:
+        # Try reading possible sysfs hwmon entries under the DRM device for power information
+        base = '/sys/class/drm/card0/device'
+        if os.path.exists(base):
+            for root, dirs, files in os.walk(base):
+                for f in files:
+                    if 'power' in f or 'power1_input' in f:
+                        try:
+                            with open(os.path.join(root, f), 'r') as fh:
+                                txt = fh.read().strip()
+                                if txt:
+                                    # Some entries may be in microwatts or watts; attempt sensible int parse
+                                    val = re.sub(r'[^0-9\.]', '', txt)
+                                    if val:
+                                        return int(float(val))
+                        except Exception:
+                            continue
+    except Exception:
+        pass
+
+    return None
