@@ -33,19 +33,13 @@ class PA140Config():
         "frequency": list(range(44, 16,-1)),
         "cpu_led": 53,
         "gpu_led": 59,
-        # temp indexes (shared structure) - also expose per-device aliases for set_temp
         "temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
-        "cpu_temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
-        "gpu_temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
-        "celsius": 68,
-        "fahrenheit": 69,
+        "celsius": 69,
+        "fahrenheit": 68,
         "watt": [74, 75, 76, 73, 70, 71, 72, 81, 82, 83, 80, 77, 78, 79, 88, 89, 90, 87, 84, 85, 86],
         "watt_led": 91,
         "frequency_led": 92,
         "all": list(range(0, 93)),
-        # per-device usage aliases so set_usage can use device+'_usage'
-        "cpu_usage": list(range(16, 0, -1)),
-        "gpu_usage": list(range(16, 0, -1)),
     }
 
     display_modes = [

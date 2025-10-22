@@ -74,6 +74,7 @@ class BaseDisplayer:
             arr = self.digit_mask[self.get_number_array(temperature)].flatten()
             # try device-specific key first, fall back to generic keys
             self._set_leds(leds, device + '_temp', arr)
+            self._set_leds(leds, 'temp', arr)
             # device-specific unit leds
             if unit == "celsius":
                 self._set_leds(leds, device + '_celsius', 1)
@@ -92,6 +93,7 @@ class BaseDisplayer:
             arr = np.concatenate(([int(usage >= 100)] * 2, self.digit_mask[self.get_number_array(usage, array_length=2)].flatten()))
             # try device-specific usage first, fallback handled inside _set_leds
             self._set_leds(leds, device + '_usage', arr)
+            self._set_leds(leds, 'usage', arr)
             # try device specific percent led and generic percent led
             self._set_leds(leds, device + '_percent_led', 1)
             self._set_leds(leds, 'percent_led', 1)
