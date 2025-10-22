@@ -50,7 +50,7 @@ class Metrics:
             'cpu_usage': [get_cpu_usage],
             'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,],
             'cpu_frequency': [get_cpu_frequency_psutil, get_cpu_frequency_proc],
-            'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, self.get_gpu_frequency_amdgpuinfo],
+            'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
             # try multiple strategies for CPU power: sysfs scanning, RAPL, turbostat
             'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat],
             'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, self.get_gpu_power_amdgpuinfo],
@@ -295,6 +295,36 @@ def get_gpu_frequency_nvidia_smi():
     except Exception:
         return None
 
+
+def get_gpu_frequency_nvidia_smi_alt():
+    """Alternative NVIDIA GPU frequency retrieval.
+    Tries nvidia-smi with clocks.current.graphics (no units), then falls back to nvidia-settings query.
+    Returns MHz as int or None.
+    """
+    try:
+        # Try a newer/query field that may return numeric value without units
+        output = subprocess.check_output([
+            'nvidia-smi',
+            '--query-gpu=clocks.current.graphics',
+            '--format=csv,noheader,nounits'
+        ], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
+        if output:
+            val = output.split('\n')[0].strip()
+            return int(float(re.sub(r'[^0-9\.]', '', val)))
+    except Exception:
+        pass
+
+    try:
+        # Fallback to nvidia-settings (if available). Use -t for terse/raw output when supported.
+        out = subprocess.check_output(['nvidia-settings', '-q', 'GPUCoreClock', '-t'], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
+        # grab the first integer found
+        m = re.search(r"(\d+)", out)
+        if m:
+            return int(m.group(1))
+    except Exception:
+        pass
+
+    return None
 
 def get_cpu_power_rapl():
     try:
