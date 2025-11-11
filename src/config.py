@@ -1,6 +1,6 @@
 old_layout_mode = {"big": "Pearless Assasin 120", "small": "TR Assassin X 120R"}
 
-NUMBER_OF_LEDS = 93
+NUMBER_OF_LEDS = 124
 
 default_config = {
     "display_mode": "metrics",

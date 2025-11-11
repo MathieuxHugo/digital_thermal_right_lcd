@@ -48,6 +48,33 @@ class PA140Config():
         "alternate_devices",
         "debug_ui",
     ]
+
+class PA140Config_BIG():
+    leds_indexes = {
+        "bottom_right": list(range(0, 10)),
+        "percent_led": 10,
+        "usage": list(range(26, 10, -1)),
+        "frequency": list(range(55, 27,-1)),
+        "middle_led": list(range(56, 70)),
+        "right_led": list(range(70, 77)),
+        "watt": list(range(98, 77,-1)),
+        "cpu_led": 99,
+        "gpu_led": 100,
+        "celsius": 101,
+        "fahrenheit": 102,
+        "watt_led": 77,
+        "frequency_led": 27,
+        "temp": list(range(123, 102, -1)),
+        "all": list(range(0, 124)),
+    }
+
+    display_modes = [
+        "gpu",
+        "cpu",
+        "alternate_devices",
+        "debug_ui",
+    ]
+
 class AX120RConfig():
     leds_indexes = {# Thermalright Assassin X 120R ARGB
         "all": list(range(0, 31)),
@@ -72,6 +99,7 @@ CONFIG_NAMES = [
     'Pearless Assasin 120',
     'Pearless Assasin 140',
     'TR Assassin X 120R',
+    'Pearless Assasin 140 BIG',
 ]
 
 def get_device_config(config_name):
@@ -79,6 +107,8 @@ def get_device_config(config_name):
         return PA120Config()
     elif config_name == 'Pearless Assasin 140':
         return PA140Config()
+    elif config_name == 'Pearless Assasin 140 BIG':
+        return PA140Config_BIG()
     elif config_name == 'TR Assassin X 120R':
         return AX120RConfig()
     else:

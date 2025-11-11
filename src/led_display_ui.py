@@ -123,37 +123,17 @@ class LEDDisplayUI:
         self.config_frame = self.create_config_panel(self.layout_frame)
         return led_frame
 
-    def create_pa120_layout(self):
-        # Clear previous layout
-        self.clear_layout()
+    def create_pa120_layout(self, led_frame, display_frame):
 
-        self.init_led_ui(NUMBER_OF_LEDS)
-        led_frame = self.setup_led_frame_and_config()
-
-        display_frame = ttk.Frame(led_frame, padding=(10, 10), style='Dark.TFrame')
-        display_frame.grid(row=0, column=0, padx=10, pady=10)
         self.create_color_mode(display_frame)
-        self.create_display_mode(display_frame, get_device_config('Pearless Assasin 120').display_modes)
 
         # Create frames for CPU and GPU
         self.cpu_frame = self.create_device_frame(led_frame, "cpu", 1)
         self.gpu_frame = self.create_device_frame(led_frame, "gpu", 2)
 
-        # Add controls for group selection and color change
-        self.create_controls(led_frame)
+        return 3
 
-    def create_ax120R_layout(self):
-        # Clear previous layout
-        self.clear_layout()
-
-        self.init_led_ui(30)
-        led_frame = self.setup_led_frame_and_config()
-
-        # Display controls at the top (row 0)
-        display_frame = ttk.Frame(led_frame, padding=(10, 10))
-        display_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_display_mode(display_frame, get_device_config('TR Assassin X 120R').display_modes)
-
+    def create_ax120R_layout(self, led_frame):
         # Device LED labels in row 1
         device_led_frame = ttk.Frame(led_frame)
         device_led_frame.grid(row=1, column=0, columnspan=4, padx=5, pady=5)
@@ -177,21 +157,9 @@ class LEDDisplayUI:
         digit_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
         self.create_segmented_digit_layout(digit_frame, "digit_frame")
         
-        # Add controls for group selection and color change in row 3
-        self.create_controls(led_frame, row=3)
+        return 3
 
-    def create_pa140_layout(self):
-        # Clear previous layout
-        self.clear_layout()
-
-        self.init_led_ui(NUMBER_OF_LEDS)
-        led_frame = self.setup_led_frame_and_config()
-
-        # Display controls at the top (row 0)
-        display_frame = ttk.Frame(led_frame, padding=(10, 10))
-        display_frame.grid(row=0, column=0, padx=10, pady=10)
-        self.create_display_mode(display_frame, get_device_config('Pearless Assasin 140').display_modes)
-
+    def create_pa140_layout_top(self, led_frame):
         device_frame = ttk.Frame(led_frame)
         device_frame.grid(row=1, column=0, padx=5, pady=5)
         self.create_label(device_frame, "cpu_led", "CPU", 0, 0, padx=5)
@@ -219,9 +187,10 @@ class LEDDisplayUI:
         power_unit_frame.grid(row=0, column=1, padx=5, pady=5)
         self.create_label(power_unit_frame, "watt_led", "W", 0, 0)
 
+    def create_pa140_layout_bottom(self, led_frame, shift=0):
         # Clock speed display (4 digits + MHz)
         clock_frame = ttk.LabelFrame(led_frame, text="Clock Frequency", padding=(10, 10), style='Dark.TLabelframe')
-        clock_frame.grid(row=3, column=0)
+        clock_frame.grid(row=3+shift, column=0)
         clock_digit_frame = ttk.Frame(clock_frame)
         clock_digit_frame.grid(row=0, column=0, padx=5, pady=5)
         self.create_segmented_digit_layout(clock_digit_frame, "frequency", number_of_digits=4) 
@@ -231,11 +200,94 @@ class LEDDisplayUI:
 
         # Usage percentage display (2 digits + %)
         usage_frame = ttk.LabelFrame(led_frame, text="Usage Percentage", padding=(10, 10), style='Dark.TLabelframe')
-        usage_frame.grid(row=3, column=1)
+        usage_frame.grid(row=3+shift, column=1)
         self.create_usage_frame(usage_frame, "usage")
         self.create_label(usage_frame, "percent_led", "%", 1, 5)
 
-        self.create_controls(led_frame, row=4)
+    def create_pa140_layout(self, led_frame):
+        self.create_pa140_layout_top(led_frame)
+        self.create_pa140_layout_bottom(led_frame)
+        return 4
+
+    def create_pa140_big_layout(self, led_frame):
+        self.create_pa140_layout_top(led_frame)
+
+        middle_led_frame = ttk.Frame(led_frame)
+        middle_led_frame.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+        for i in range(14):
+            canvas = tk.Canvas(middle_led_frame, width=30, height=5, highlightthickness=0, bg='black')
+            canvas.grid(row=0, column=i, padx=5, pady=5)
+            rectangle_led_index = self.leds_indexes["middle_led"][i]
+            canvas.bind("<Button-1>",
+                lambda event,
+                led_key="middle_led", led_index=i: self.change_led_color(
+                    led_key, index=led_index
+                ),
+            )
+            self.leds_ui[rectangle_led_index] = canvas
+
+        right_led_frame = ttk.Frame(led_frame)
+        right_led_frame.grid(row=2, column=2, rowspan=3, padx=5, pady=5)
+
+        for i in range(7):
+            canvas = tk.Canvas(right_led_frame, width=10, height=20, highlightthickness=0, bg='black')
+            canvas.grid(row=i, column=0, padx=5, pady=5)
+            rectangle_led_index = self.leds_indexes["right_led"][i]
+            canvas.bind("<Button-1>",
+                lambda event,
+                led_key="right_led", led_index=i: self.change_led_color(
+                    led_key, index=led_index
+                ),
+            )
+            self.leds_ui[rectangle_led_index] = canvas
+
+
+        self.create_pa140_layout_bottom(led_frame, shift=1)
+
+        # Main area: left block with 5 vertical rectangles side-by-side
+        main_area = ttk.Frame(led_frame)
+        main_area.grid(row=5, column=1, padx=10, pady=10)
+
+        left_frame = ttk.Frame(main_area)
+        left_frame.grid(row=1, column=0, padx=10, pady=10)
+
+        start_index = 0
+        big_side = 60
+        small_side = 15
+        # create 5 vertical rectangles next to each other
+        for i in range(5):
+            canvas = tk.Canvas(left_frame, width=small_side, height=big_side, highlightthickness=0, bg='black')
+            canvas.grid(row=0, column=i, padx=5, pady=5)
+            rectangle_led_index = self.leds_indexes["bottom_right"][start_index]
+            canvas.bind("<Button-1>",
+                lambda event,
+                led_key="bottom_right", led_index=start_index: self.change_led_color(
+                    led_key, index=led_index
+                ),
+            )
+            self.leds_ui[rectangle_led_index] = canvas
+            start_index += 1
+
+        # Right corner: 5 horizontal rectangles stacked vertically
+        right_frame = ttk.Frame(main_area)
+        right_frame.grid(row=0, column=1, padx=40, pady=10, sticky='n')
+
+        for j in range(5):
+
+            rectangle_led_index = self.leds_indexes["bottom_right"][start_index]
+            canvas_h = tk.Canvas(right_frame, width=big_side, height=small_side, highlightthickness=0, bg='black')
+            canvas_h.grid(row=j, column=0, padx=5, pady=5)
+            canvas_h.bind("<Button-1>",
+                lambda event,
+                led_key="bottom_right", led_index=start_index: self.change_led_color(
+                    led_key, index=led_index
+                ),
+            )
+            self.leds_ui[rectangle_led_index] = canvas_h
+            start_index += 1
+
+        return 6
 
     def change_layout_mode(self):
         layout_name = self.layout_mode.get()
@@ -250,15 +302,36 @@ class LEDDisplayUI:
                 self.config["display_mode"] = 'alternate_metrics'
             else:
                 self.config["display_mode"] = device_conf.display_modes[0]
+        self.create_layout(layout_name)
+        self.write_config()
+
+    def create_layout(self, layout_name):
+        controls_row_index = 0
+        # Clear previous layout
+        self.clear_layout()
+
+        self.init_led_ui(NUMBER_OF_LEDS)
+        led_frame = self.setup_led_frame_and_config()
+
+        # Display controls at the top
+        display_frame = ttk.Frame(led_frame, padding=(10, 10))
+        display_frame.grid(row=0, column=0, padx=10, pady=10)
+        # use the same device config display modes as the standard PA140
+        self.create_display_mode(display_frame, get_device_config(layout_name).display_modes)
+
         # Call the correct create_* layout function
         if layout_name == 'Pearless Assasin 120':
-            self.create_pa120_layout()
+            controls_row_index = self.create_pa120_layout(led_frame)
         elif layout_name == 'TR Assassin X 120R':
-            self.create_ax120R_layout()
+            controls_row_index = self.create_ax120R_layout(led_frame)
+        elif layout_name == 'Pearless Assasin 140 BIG':
+            controls_row_index = self.create_pa140_big_layout(led_frame)
         else:
             # default to PA140 layout for any other name
-            self.create_pa140_layout()
-        self.write_config()
+            controls_row_index = self.create_pa140_layout(led_frame)
+        
+        # Add controls (group selection and color change)
+        self.create_controls(led_frame, row=controls_row_index)
 
     def set_default_config(self):
         self.config = default_config.copy()
