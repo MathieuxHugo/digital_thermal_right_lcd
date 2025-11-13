@@ -339,6 +339,14 @@ class PA140Displayer(BaseDisplayer):
             colors[lit] = self.metrics_colors[lit]
         return leds, colors
 
+class PA140DisplayerBig(PA140Displayer):
+    def get_state(self, display_mode, cpt):
+        leds, colors = super().get_state(display_mode, cpt)
+        self._set_leds(leds, 'middle_led', 1)
+        self._set_leds(leds, 'right_led', 1)
+        self._set_leds(leds, 'bottom_right', 1)
+        return leds, colors
+
 class DisplayerFactory:
     """Factory that returns a displayer instance. It reuses the existing instance
     if the layout type hasn't changed; otherwise it creates a new one."""
@@ -353,6 +361,8 @@ class DisplayerFactory:
                 inst = PA120Displayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
             elif layout_name == 'Pearless Assasin 140':
                 inst = PA140Displayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
+            elif layout_name == 'Pearless Assasin 140 BIG':
+                inst = PA140DisplayerBig(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
             elif layout_name == 'TR Assassin X 120R':
                 inst = AX120RDisplayer(leds_indexes, number_of_leds, metrics, metrics_colors, time_colors, temp_unit, metrics_min_value, metrics_max_value, update_interval, cycle_duration)
             else:
