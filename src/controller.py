@@ -100,7 +100,7 @@ class Controller:
         packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
         packets = message[88:]
-        for i in range(0,4):
+        for i in range(int(len(packets)/128)):
             packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
             self.dev.write(packet)
 
