@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
 import sys
-from config import NUMBER_OF_LEDS, default_config, old_layout_mode
+from config import default_config, old_layout_mode, MAX_NUMBER_OF_LEDS
 from device_configurations import get_device_config, CONFIG_NAMES
 import numpy as np
 import threading
@@ -293,6 +293,7 @@ class LEDDisplayUI:
         layout_name = self.layout_mode.get()
         device_conf = get_device_config(layout_name)
         self.leds_indexes = device_conf.leds_indexes
+        self.init_led_ui(len(self.leds_indexes["all"]))
         self.config["layout_mode"] = layout_name
         if self.config["display_mode"] not in device_conf.display_modes:
             print(f"Warning: Display mode {self.config['display_mode']} not compatible with {layout_name} layout, switching to a compatible mode.")
@@ -310,7 +311,6 @@ class LEDDisplayUI:
         # Clear previous layout
         self.clear_layout()
 
-        self.init_led_ui(NUMBER_OF_LEDS)
         led_frame = self.setup_led_frame_and_config()
 
         # Display controls at the top
@@ -321,7 +321,7 @@ class LEDDisplayUI:
 
         # Call the correct create_* layout function
         if layout_name == 'Pearless Assasin 120':
-            controls_row_index = self.create_pa120_layout(led_frame)
+            controls_row_index = self.create_pa120_layout(led_frame, display_frame)
         elif layout_name == 'TR Assassin X 120R':
             controls_row_index = self.create_ax120R_layout(led_frame)
         elif layout_name == 'Pearless Assasin 140 BIG':
@@ -377,7 +377,7 @@ class LEDDisplayUI:
                 config = {}
 
         # Enforce that every colors list matches the NUMBER_OF_LEDS constant
-        expected_led_count = NUMBER_OF_LEDS
+        expected_led_count = MAX_NUMBER_OF_LEDS
 
         for key, val in list(config.items()):
             if isinstance(val, dict):
