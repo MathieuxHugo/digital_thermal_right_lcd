@@ -4,6 +4,8 @@ import psutil
 import time
 import os
 
+from get_amd_power import CPUPower
+
 try:
     import pyamdgpuinfo
 except Exception as e:
@@ -13,6 +15,7 @@ except Exception as e:
 
 class Metrics:
     def __init__(self, update_interval=0.5):
+        self.update_interval = update_interval # seconds
         self.metrics_functions = {
             'cpu_temp': None,
             'gpu_temp': None,
@@ -43,7 +46,7 @@ class Metrics:
         except Exception:
             print("pyamdgpuinfo not installed. GPU temperature will not be available.")
             self.gpu = None
-
+        self.cpu_power_reader = CPUPower()
         candidates =  {
             'cpu_temp': [get_cpu_temp_psutils,get_cpu_temp_linux,get_cpu_temp_windows_wmi,get_cpu_temp_windows_wintmp,get_cpu_temp_raspberry_pi],
             'gpu_temp': [get_gpu_temp_nvidia,get_gpu_temp_wintemp, self.get_gpu_temp_amdgpuinfo],
@@ -52,7 +55,7 @@ class Metrics:
             'cpu_frequency': [get_cpu_frequency_psutil, get_cpu_frequency_proc],
             'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
             # try multiple strategies for CPU power: sysfs scanning, RAPL, turbostat
-            'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat],
+            'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat, self.get_cpu_power],
             'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, get_gpu_power_nvidia_smi_alt, self.get_gpu_power_amdgpuinfo],
         }
         for metric, functions in candidates.items():
@@ -68,7 +71,6 @@ class Metrics:
             if self.metrics_functions[metric] is None:
                 print(f"Warning: No suitable function found for {metric}.")
         self.last_update = time.time()
-        self.update_interval = update_interval # seconds
 
     def get_metrics(self, temp_unit):
         if time.time() - self.last_update < self.update_interval:
@@ -99,6 +101,13 @@ class Metrics:
         except Exception:
             return None
         
+    def get_cpu_power(self):
+        try:
+            return int(self.cpu_power_reader.compute_power_all_cores(self.update_interval))
+        except Exception as e:
+            print(f"Error getting CPU power: {e}")
+            return None
+
     def get_gpu_temp_amdgpuinfo(self):
         try:
             return self.gpu.query_temperature()
@@ -457,4 +466,16 @@ def get_gpu_power_nvidia_smi_alt():
     except Exception:
         pass
 
+    return None
+
+def get_amd_cpu_power():
+    try:
+        output = subprocess.check_output(["rapl"], encoding="utf-8")
+        # Example output line: "Package Power: 65.14W"
+        for line in output.split('\n'):
+            if "Package sum" in line:
+                watts = float(line.split(":")[1].strip('W '))
+                return int(watts)
+    except Exception:
+            return None
     return None

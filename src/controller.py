@@ -99,10 +99,12 @@ class Controller:
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(self.number_of_leds)])
         packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
-        packets = message[88:]
-        for i in range(int(np.ceil(len(packets)/128))):
+        packets = message[128-len(self.HEADER):]
+        number_of_packets = int(np.ceil(len(packets)/128))
+        for i in range(int(np.ceil(number_of_packets))):
             packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
             self.dev.write(packet)
+            time.sleep(self.update_interval/(10+number_of_packets))  # small delay to avoid overwhelming the device
 
     def get_config_colors(self, config, key="metrics"):
         conf_colors = config.get(key, {}).get('colors', ["ffe000"] * self.number_of_leds)
