@@ -1,0 +1,55 @@
+{
+  "name": "Pearless Assassin 120 ARGB",
+  "total_leds": 84,
+  "display_modes": [
+    "alternate_time",
+    "metrics",
+    "time",
+    "time_cpu",
+    "time_gpu",
+    "alternate_time_with_seconds",
+    "debug_ui"
+  ],
+  "groups": {
+    "all": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "count": 84}
+    },
+    "cpu": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "count": 42}
+    },
+    "gpu": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 42, "count": 42}
+    },
+    "cpu_led": [0, 1],
+    "cpu_temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "classic", "start": 2, "count": 21}
+    },
+    "cpu_celsius": 23,
+    "cpu_fahrenheit": 24,
+    "cpu_usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "classic", "start": 25, "count": 16}
+    },
+    "cpu_percent_led": 41,
+    "gpu_led": [82, 83],
+    "gpu_temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 81, "stop": 60, "step": -1}
+    },
+    "gpu_celsius": 59,
+    "gpu_fahrenheit": 60,
+    "gpu_usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "reversed", "start": 58, "stop": 42, "step": -1}
+    },
+    "gpu_percent_led": 42
+  }
+}

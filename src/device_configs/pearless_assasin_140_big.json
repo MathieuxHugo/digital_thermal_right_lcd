@@ -1,0 +1,55 @@
+{
+  "name": "Pearless Assassin 140 BIG ARGB",
+  "total_leds": 124,
+  "display_modes": [
+    "gpu",
+    "cpu",
+    "alternate_devices",
+    "debug_ui"
+  ],
+  "groups": {
+    "all": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "count": 124}
+    },
+    "bottom_right": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "count": 10}
+    },
+    "percent_led": 10,
+    "usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "reversed", "start": 26, "stop": 10, "step": -1}
+    },
+    "frequency": {
+      "type": "digit",
+      "count": 4,
+      "leds": {"type": "reversed", "start": 55, "stop": 27, "step": -1}
+    },
+    "middle_led": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 56, "count": 14}
+    },
+    "right_led": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 117, "count": 7}
+    },
+    "watt": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 91, "stop": 70, "step": -1}
+    },
+    "temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 114, "stop": 93, "step": -1}
+    },
+    "cpu_led": 116,
+    "gpu_led": 115,
+    "celsius": 93,
+    "fahrenheit": 92,
+    "watt_led": 70,
+    "frequency_led": 27
+  }
+}

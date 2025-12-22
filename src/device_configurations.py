@@ -1,116 +1,138 @@
-class PA120Config():
-    leds_indexes = {# pearless assassin 120 ARGB
-        "all": list(range(0, 84)),
-        "cpu": list(range(0, 42)),
-        "gpu": list(range(42, 84)),
-        "cpu_led": [0, 1],
-        "cpu_temp": list(range(2, 23)),
-        "cpu_celsius": 23,
-        "cpu_fahrenheit": 24,
-        "cpu_usage": list(range(25, 41)),
-        "cpu_percent_led": 41,
-        "gpu_led": [82, 83],
-        "gpu_temp": list(range(81, 60, -1)),
-        "gpu_celsius": 59,
-        "gpu_fahrenheit": 60,
-        "gpu_usage": list(range(58, 42, -1)),
-        "gpu_percent_led": 42,
-    }
-    display_modes = [
-        "alternate_time",
-        "metrics",
-        "time",
-        "time_cpu",
-        "time_gpu",
-        "alternate_time_with_seconds",
-        "debug_ui",
-    ]
+import json
+import os
+from pathlib import Path
 
-class PA140Config():
-    leds_indexes = {
-        "percent_led": 0,
-        "usage": list(range(16, 0, -1)),
-        "frequency": list(range(44, 16,-1)),
-        "cpu_led": 53,
-        "gpu_led": 59,
-        "temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
-        "celsius": 69,
-        "fahrenheit": 68,
-        "watt": [74, 75, 76, 73, 70, 71, 72, 81, 82, 83, 80, 77, 78, 79, 88, 89, 90, 87, 84, 85, 86],
-        "watt_led": 91,
-        "frequency_led": 92,
-        "all": list(range(0, 93)),
-    }
 
-    display_modes = [
-        "gpu",
-        "cpu",
-        "alternate_devices",
-        "debug_ui",
-    ]
+def _parse_led_range(range_spec):
+    """
+    Parse a range specification into a list of indices.
+    
+    Args:
+        range_spec: Can be:
+            - A list: returned as-is
+            - A dict with "type": "range", "start", "stop", "step"
+            - A dict with "type": "classic", "start", "count"
+            - A dict with "type": "reversed", "start", "stop", "step"
+    
+    Returns:
+        List of LED indices
+    """
+    if isinstance(range_spec, list):
+        return range_spec
+    
+    if isinstance(range_spec, dict):
+        range_type = range_spec.get("type", "classic")
+        
+        if range_type == "classic":
+            # Continuous range: start to start+count
+            start = range_spec.get("start", 0)
+            count = range_spec.get("count", 1)
+            return list(range(start, start + count))
+        
+        elif range_type == "reversed":
+            # Reversed range: start down to stop with step
+            start = range_spec.get("start", 0)
+            stop = range_spec.get("stop", 0)
+            step = range_spec.get("step", -1)
+            return list(range(start, stop, step))
+        
+        elif range_type == "range":
+            # Custom range with start, stop, step
+            start = range_spec.get("start", 0)
+            stop = range_spec.get("stop", 0)
+            step = range_spec.get("step", 1)
+            return list(range(start, stop, step))
+    
+    return []
 
-class PA140Config_BIG():
-    leds_indexes = {
-        "bottom_right": list(range(0, 10)),
-        "percent_led": 10,
-        "usage": list(range(26, 10, -1)),
-        "frequency": list(range(55, 27,-1)),
-        "middle_led": list(range(56, 70)),
-        "right_led": list(range(117, 124)),
-        "watt": list(range(91, 70,-1)),
-        "cpu_led": 116,
-        "gpu_led": 115,
-        "celsius": 93,
-        "fahrenheit": 92,
-        "watt_led": 70,
-        "frequency_led": 27,
-        "temp": list(range(114, 93, -1)),
-        "all": list(range(0, 124)),
-    }
 
-    display_modes = [
-        "gpu",
-        "cpu",
-        "alternate_devices",
-        "debug_ui",
-    ]
+def _expand_led_group(group_spec):
+    """
+    Expand a group specification into LED indices.
+    
+    A group can be:
+    - An integer (single LED)
+    - A list of integers (specific LEDs)
+    - A dict with "type": "digit" or "leds" and range specification
+    """
+    if isinstance(group_spec, int):
+        return group_spec
+    
+    if isinstance(group_spec, list):
+        return group_spec
+    
+    if isinstance(group_spec, dict):
+        group_type = group_spec.get("type", "leds")
+        
+        if group_type == "digit":
+            # A digit is 7 LEDs
+            num_digits = group_spec.get("count", 1)
+            led_range = _parse_led_range(group_spec.get("leds", []))
+            # For digits, the range should contain 7*num_digits elements
+            return led_range
+        
+        elif group_type == "leds":
+            # Direct LED specification
+            return _parse_led_range(group_spec.get("leds", []))
+    
+    return []
 
-class AX120RConfig():
-    leds_indexes = {# Thermalright Assassin X 120R ARGB
-        "all": list(range(0, 31)),
-        "digit_frame": [14, 9, 10, 15, 13, 12, 11, 21, 16, 17, 22, 20, 19, 18, 28, 23, 24, 29, 27, 26, 25],
-        "celsius": 6,
-        "fahrenheit": 7,
-        "percent_led": 8,
-        "gpu_led": [4, 5],
-        "cpu_led": [2, 3],
-    }
 
-    display_modes = [
-        "alternate_metrics",
-        "cpu_temp",
-        "gpu_temp",
-        "cpu_usage",
-        "gpu_usage",
-        "debug_ui",
-    ]
+class DeviceConfig:
+    """Represents a device configuration loaded from JSON."""
+    
+    def __init__(self, config_dict):
+        self.config_dict = config_dict
+        self.leds_indexes = self._build_leds_indexes()
+        self.display_modes = config_dict.get("display_modes", [])
+    
+    def _build_leds_indexes(self):
+        """Build the leds_indexes dictionary from the JSON config."""
+        leds_indexes = {}
+        groups = self.config_dict.get("groups", {})
+        
+        for group_name, group_spec in groups.items():
+            leds_indexes[group_name] = _expand_led_group(group_spec)
+        
+        return leds_indexes
 
+
+def load_device_config_from_json(json_path):
+    """Load a device configuration from a JSON file."""
+    try:
+        with open(json_path, 'r') as f:
+            config_dict = json.load(f)
+        return DeviceConfig(config_dict)
+    except Exception as e:
+        print(f"Error loading config from {json_path}: {e}")
+        return None
+
+
+def get_device_config(config_name):
+    """Get a device configuration by name."""
+    # Build path to config file
+    config_dir = Path(__file__).parent / "device_configs"
+    config_file = config_dir / f"{config_name.lower().replace(' ', '_')}.json"
+    
+    if config_file.exists():
+        config = load_device_config_from_json(config_file)
+        if config:
+            return config
+    
+    print(f"Warning: Configuration '{config_name}' not found. Defaulting to Pearless Assasin 120.")
+    # Fallback to default
+    default_file = config_dir / "pearless_assasin_120.json"
+    if default_file.exists():
+        return load_device_config_from_json(default_file)
+    
+    # If no files available, return empty config
+    return DeviceConfig({"groups": {}, "display_modes": ["metrics"]})
+
+
+# Device names for UI
 CONFIG_NAMES = [
     'Pearless Assasin 120',
     'Pearless Assasin 140',
     'TR Assassin X 120R',
     'Pearless Assasin 140 BIG',
 ]
-
-def get_device_config(config_name):
-    if config_name == 'Pearless Assasin 120':
-        return PA120Config()
-    elif config_name == 'Pearless Assasin 140':
-        return PA140Config()
-    elif config_name == 'Pearless Assasin 140 BIG':
-        return PA140Config_BIG()
-    elif config_name == 'TR Assassin X 120R':
-        return AX120RConfig()
-    else:
-        print(f"Warning: Unknown configuration '{config_name}'. Defaulting to Pearless Assasin 120.")
-        return PA120Config()

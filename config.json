@@ -1,5 +1,5 @@
 {
-    "display_mode": "gpu",
+    "display_mode": "metrics",
     "metrics": {
         "colors": [
             "00ffff",
@@ -267,5 +267,5 @@
     "vendor_id": "0x0416",
     "cpu_temperature_unit": "celsius",
     "gpu_temperature_unit": "celsius",
-    "layout_mode": "Pearless Assasin 140 BIG"
+    "layout_mode": "Pearless Assasin 120"
 }
