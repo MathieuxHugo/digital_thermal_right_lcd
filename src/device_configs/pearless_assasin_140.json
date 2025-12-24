@@ -1,12 +1,59 @@
 {
   "name": "Pearless Assassin 140 ARGB",
   "total_leds": 93,
-  "display_modes": [
-    "gpu",
-    "cpu",
-    "alternate_devices",
-    "debug_ui"
-  ],
+  "display_modes": {
+    "gpu": {
+      "type": "static",
+      "mappings": {
+        "usage": "gpu_usage",
+        "frequency": "gpu_frequency",
+        "temp": "gpu_temp",
+        "watt": "gpu_watt"
+      }
+    },
+    "cpu": {
+      "type": "static",
+      "mappings": {
+        "usage": "cpu_usage",
+        "frequency": "cpu_frequency",
+        "temp": "cpu_temp",
+        "watt": "cpu_watt"
+      }
+    },
+    "alternate_devices": {
+      "type": "alternating",
+      "interval": 5,
+      "displays": [
+        {
+          "name": "cpu_metrics",
+          "mappings": {
+            "usage": "cpu_usage",
+            "frequency": "cpu_frequency",
+            "temp": "cpu_temp",
+            "watt": "cpu_watt"
+          }
+        },
+        {
+          "name": "gpu_metrics",
+          "mappings": {
+            "usage": "gpu_usage",
+            "frequency": "gpu_frequency",
+            "temp": "gpu_temp",
+            "watt": "gpu_watt"
+          }
+        }
+      ]
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "usage": "debug",
+        "frequency": "debug",
+        "temp": "debug",
+        "watt": "debug"
+      }
+    }
+  },
   "groups": {
     "all": {
       "type": "leds",

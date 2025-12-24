@@ -1,5 +1,5 @@
 {
-    "display_mode": "metrics",
+    "display_mode": "'alternate_time': <device_configurations.DisplayMode object at 0x7d108db921e0>, 'metrics': <device_configurations.DisplayMode object at 0x7d108db92210>, 'time': <device_configurations.DisplayMode object at 0x7d108db92240>, 'time_cpu': <device_configurations.DisplayMode object at 0x7d108db92270>, 'time_gpu': <device_configurations.DisplayMode object at 0x7d108db922a0>, 'alternate_time_with_seconds': <device_configurations.DisplayMode object at 0x7d108db922d0>, 'debug_ui': <device_configurations.DisplayMode object at 0x7d108db92300>",
     "metrics": {
         "colors": [
             "00ffff",

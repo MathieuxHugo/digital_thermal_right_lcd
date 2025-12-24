@@ -1,14 +1,56 @@
 {
   "name": "Thermalright Assassin X 120R ARGB",
   "total_leds": 31,
-  "display_modes": [
-    "alternate_metrics",
-    "cpu_temp",
-    "gpu_temp",
-    "cpu_usage",
-    "gpu_usage",
-    "debug_ui"
-  ],
+  "display_modes": {
+    "alternate_metrics": {
+      "type": "alternating",
+      "interval": 5,
+      "displays": [
+        {
+          "name": "cpu_metrics",
+          "mappings": {
+            "digit_frame": "cpu_temp"
+          }
+        },
+        {
+          "name": "gpu_metrics",
+          "mappings": {
+            "digit_frame": "gpu_temp"
+          }
+        }
+      ]
+    },
+    "cpu_temp": {
+      "type": "static",
+      "mappings": {
+        "digit_frame": "cpu_temp"
+      }
+    },
+    "gpu_temp": {
+      "type": "static",
+      "mappings": {
+        "digit_frame": "gpu_temp"
+      }
+    },
+    "cpu_usage": {
+      "type": "static",
+      "mappings": {
+        "digit_frame": "cpu_usage"
+      }
+    },
+    "gpu_usage": {
+      "type": "static",
+      "mappings": {
+        "digit_frame": "gpu_usage"
+      }
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "digit_frame": "debug"
+      }
+    }
+  },
   "groups": {
     "all": {
       "type": "leds",

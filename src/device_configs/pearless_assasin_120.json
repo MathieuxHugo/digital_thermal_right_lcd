@@ -1,15 +1,6 @@
 {
   "name": "Pearless Assassin 120 ARGB",
   "total_leds": 84,
-  "display_modes": [
-    "alternate_time",
-    "metrics",
-    "time",
-    "time_cpu",
-    "time_gpu",
-    "alternate_time_with_seconds",
-    "debug_ui"
-  ],
   "groups": {
     "all": {
       "type": "leds",
@@ -51,5 +42,94 @@
       "leds": {"type": "reversed", "start": 58, "stop": 42, "step": -1}
     },
     "gpu_percent_led": 42
+  },
+  "display_modes": {
+    "alternate_time": {
+      "type": "alternating",
+      "interval": 5,
+      "displays": [
+        {
+          "name": "time_hours",
+          "mappings": {
+            "cpu_temp": "hours",
+            "cpu_usage": "minutes",
+            "gpu_usage": "seconds"
+          }
+        },
+        {
+          "name": "metrics",
+          "mappings": {
+            "cpu_temp": "cpu_temp",
+            "cpu_usage": "cpu_usage",
+            "gpu_temp": "gpu_temp",
+            "gpu_usage": "gpu_usage"
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "cpu_temp",
+        "cpu_usage": "cpu_usage",
+        "gpu_temp": "gpu_temp",
+        "gpu_usage": "gpu_usage"
+      }
+    },
+    "time": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "hours",
+        "cpu_usage": "minutes",
+        "gpu_usage": "seconds"
+      }
+    },
+    "time_cpu": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "hours",
+        "cpu_usage": "minutes"
+      }
+    },
+    "time_gpu": {
+      "type": "static",
+      "mappings": {
+        "gpu_temp": "hours",
+        "gpu_usage": "minutes"
+      }
+    },
+    "alternate_time_with_seconds": {
+      "type": "alternating",
+      "interval": 5,
+      "displays": [
+        {
+          "name": "time_with_seconds",
+          "mappings": {
+            "cpu_temp": "hours",
+            "cpu_usage": "minutes",
+            "gpu_temp": "seconds",
+            "gpu_usage": "cpu_temp"
+          }
+        },
+        {
+          "name": "metrics",
+          "mappings": {
+            "cpu_temp": "cpu_temp",
+            "cpu_usage": "cpu_usage",
+            "gpu_temp": "gpu_temp",
+            "gpu_usage": "gpu_usage"
+          }
+        }
+      ]
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "debug",
+        "cpu_usage": "debug",
+        "gpu_temp": "debug",
+        "gpu_usage": "debug"
+      }
+    }
   }
 }

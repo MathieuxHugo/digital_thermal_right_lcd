@@ -78,13 +78,28 @@ def _expand_led_group(group_spec):
     return []
 
 
+class DisplayMode:
+    """Represents a display mode configuration."""
+    
+    def __init__(self, mode_dict):
+        self.mode_dict = mode_dict
+        self.name = mode_dict.get("name", "")
+        self.type = mode_dict.get("type", "static")  # "static" or "alternating"
+        self.displays = mode_dict.get("displays", [])
+        self.interval = mode_dict.get("interval", 5)  # For alternating modes
+    
+    def get_display_groups(self):
+        """Get the group mappings for this display mode."""
+        return self.displays
+
+
 class DeviceConfig:
     """Represents a device configuration loaded from JSON."""
     
     def __init__(self, config_dict):
         self.config_dict = config_dict
         self.leds_indexes = self._build_leds_indexes()
-        self.display_modes = config_dict.get("display_modes", [])
+        self.display_modes = self._build_display_modes()
     
     def _build_leds_indexes(self):
         """Build the leds_indexes dictionary from the JSON config."""
@@ -95,6 +110,29 @@ class DeviceConfig:
             leds_indexes[group_name] = _expand_led_group(group_spec)
         
         return leds_indexes
+    
+    def _build_display_modes(self):
+        """Build the display_modes dictionary from the JSON config."""
+        display_modes_dict = {}
+        modes = self.config_dict.get("display_modes", {})
+        
+        if isinstance(modes, dict):
+            for mode_name, mode_spec in modes.items():
+                display_modes_dict[mode_name] = DisplayMode(mode_spec)
+        elif isinstance(modes, list):
+            # For backward compatibility with list of mode names
+            for mode_name in modes:
+                display_modes_dict[mode_name] = DisplayMode({"name": mode_name})
+        
+        return display_modes_dict
+    
+    def get_display_mode(self, mode_name):
+        """Get a display mode by name."""
+        return self.display_modes.get(mode_name)
+    
+    def get_mode_names(self):
+        """Get list of available display mode names."""
+        return list(self.display_modes.keys())
 
 
 def load_device_config_from_json(json_path):
@@ -126,7 +164,7 @@ def get_device_config(config_name):
         return load_device_config_from_json(default_file)
     
     # If no files available, return empty config
-    return DeviceConfig({"groups": {}, "display_modes": ["metrics"]})
+    return DeviceConfig({"groups": {}, "display_modes": {}})
 
 
 # Device names for UI

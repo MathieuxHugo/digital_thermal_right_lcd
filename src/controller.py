@@ -192,7 +192,6 @@ class Controller:
 
             # Use factory to get or reuse appropriate displayer
             self.displayer = DisplayerFactory.get_displayer(
-                layout_name,
                 self.leds_indexes,
                 self.number_of_leds,
                 self.metrics,
@@ -203,6 +202,7 @@ class Controller:
                 self.metrics_max_value,
                 self.update_interval,
                 self.cycle_duration,
+                device_config=device_conf,
             )
         else:
             VENDOR_ID = 0x0416
@@ -225,11 +225,11 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
-            self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
+            device_conf = get_device_config('Pearless Assasin 120')
+            self.leds_indexes = device_conf.leds_indexes
             self.number_of_leds = len(self.leds_indexes['all'])
             # Use factory for default displayer as well
             self.displayer = DisplayerFactory.get_displayer(
-                'Pearless Assasin 120',
                 self.leds_indexes,
                 self.number_of_leds,
                 self.metrics,
@@ -240,6 +240,7 @@ class Controller:
                 self.metrics_max_value,
                 self.update_interval,
                 self.cycle_duration,
+                device_config=device_conf,
             )
         # Note: leds_indexes may have been updated above using device_configurations
 
