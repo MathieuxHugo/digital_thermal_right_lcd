@@ -132,7 +132,7 @@ class Displayer:
             factor = 0
         return factor
 
-    def _apply_mapping(self, leds, colors, led_group, data_source, metrics_vals, now):
+    def _apply_mapping(self, leds, led_group, data_source, metrics_vals, now):
         """Apply a single mapping: display data_source on led_group."""
         if data_source == "debug":
             # Debug mode: light all LEDs for this group
@@ -152,6 +152,12 @@ class Displayer:
             value = metrics_vals[data_source]
             if value is None:
                 return
+            
+            # Light device LED based on data source
+            if data_source.startswith("gpu_"):
+                self._set_leds(leds, "gpu_led", 1)
+            elif data_source.startswith("cpu_"):
+                self._set_leds(leds, "cpu_led", 1)
             
             # Determine how to display the metric based on the LED group type
             if "temp" in led_group:
@@ -193,21 +199,14 @@ class Displayer:
                 except:
                     pass
 
-    def _execute_display_config(self, leds, colors, mappings, metrics_vals, now, is_time_display=False):
+    def _execute_display_config(self, leds, colors, mappings, metrics_vals, now):
         """Execute a display configuration defined by mappings."""
+        colors = self.metrics_colors
         for led_group, data_source in mappings.items():
-            self._apply_mapping(leds, colors, led_group, data_source, metrics_vals, now)
+            if data_source in ["hours", "minutes", "seconds"]:
+                colors[self.leds_indexes[led_group]] = self.time_colors[self.leds_indexes[led_group]]
+            self._apply_mapping(leds, led_group, data_source, metrics_vals, now)
         
-        # Apply colors
-        try:
-            if is_time_display:
-                lit = leds.astype(bool)
-                colors[lit] = self.time_colors[lit]
-            else:
-                lit = leds.astype(bool)
-                colors[lit] = self.metrics_colors[lit]
-        except:
-            pass
 
     def _get_state_from_config(self, display_mode, cpt, leds, colors):
         """Get display state using JSON-based device configuration."""
@@ -221,8 +220,7 @@ class Displayer:
         if display_mode_config.type == "static":
             # Static display: apply mappings once
             mappings = display_mode_config.mode_dict.get("mappings", {})
-            is_time = any(src in ["hours", "minutes", "seconds"] for src in mappings.values())
-            self._execute_display_config(leds, colors, mappings, metrics_vals, now, is_time_display=is_time)
+            self._execute_display_config(leds, colors, mappings, metrics_vals, now)
         
         elif display_mode_config.type == "alternating":
             # Alternating display: cycle through displays
@@ -236,15 +234,14 @@ class Displayer:
             current_display = displays[display_index]
             
             mappings = current_display.get("mappings", {})
-            is_time = any(src in ["hours", "minutes", "seconds"] for src in mappings.values())
-            self._execute_display_config(leds, colors, mappings, metrics_vals, now, is_time_display=is_time)
+            self._execute_display_config(leds, colors, mappings, metrics_vals, now)
         
         return leds, colors
 
     def get_state(self, display_mode, cpt):
         """Get the LED state and colors for the current display mode."""
         leds = np.array([0] * self.number_of_leds)
-        colors = np.array(["000000"] * self.number_of_leds)
+        colors = self.metrics_colors
         
         # Use JSON-based config if available
         if self.device_config:

@@ -157,6 +157,12 @@ class Controller:
         if self.config:
             VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
             PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
+            # Use device_configurations to obtain leds_indexes and supported display modes
+            layout_name = self.config.get('layout_mode', 'Pearless Assasin 120')
+            device_conf = get_device_config(layout_name)
+            self.leds_indexes = device_conf.leds_indexes
+            self.number_of_leds = len(self.leds_indexes['all'])
+
             self.metrics_max_value = {
                 "cpu_temp": self.config.get('cpu_max_temp', 90),
                 "gpu_temp": self.config.get('gpu_max_temp', 90),
@@ -175,11 +181,7 @@ class Controller:
             self.update_interval = self.config.get('update_interval', 0.1)
             self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
             self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
-            # Use device_configurations to obtain leds_indexes and supported display modes
-            layout_name = self.config.get('layout_mode', 'Pearless Assasin 120')
-            device_conf = get_device_config(layout_name)
-            self.leds_indexes = device_conf.leds_indexes
-            self.number_of_leds = len(self.leds_indexes['all'])
+
             if self.display_mode not in device_conf.display_modes:
                 print(f"Warning: Display mode {self.display_mode} not compatible with {layout_name} layout, switching to a compatible mode.")
                 # Prefer 'metrics' or 'alternate_metrics' if available, otherwise pick the first supported mode

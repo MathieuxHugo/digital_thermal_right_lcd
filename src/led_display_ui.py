@@ -295,14 +295,14 @@ class LEDDisplayUI:
         self.leds_indexes = device_conf.leds_indexes
         self.init_led_ui(len(self.leds_indexes["all"]))
         self.config["layout_mode"] = layout_name
-        if self.config["display_mode"] not in device_conf.display_modes:
+        if self.config["display_mode"] not in device_conf.get_mode_names():
             print(f"Warning: Display mode {self.config['display_mode']} not compatible with {layout_name} layout, switching to a compatible mode.")
-            if 'metrics' in device_conf.display_modes:
+            if 'metrics' in device_conf.get_mode_names():
                 self.config["display_mode"] = 'metrics'
-            elif 'alternate_metrics' in device_conf.display_modes:
+            elif 'alternate_metrics' in device_conf.get_mode_names():
                 self.config["display_mode"] = 'alternate_metrics'
             else:
-                self.config["display_mode"] = device_conf.display_modes[0]
+                self.config["display_mode"] = device_conf.get_mode_names()[0]
         self.create_layout(layout_name)
         self.write_config()
 
@@ -317,7 +317,7 @@ class LEDDisplayUI:
         display_frame = ttk.Frame(led_frame, padding=(10, 10))
         display_frame.grid(row=0, column=0, padx=10, pady=10)
         # use the same device config display modes as the standard PA140
-        self.create_display_mode(display_frame, get_device_config(layout_name).display_modes)
+        self.create_display_mode(display_frame, get_device_config(layout_name).get_mode_names())
 
         # Call the correct create_* layout function
         if layout_name == 'Pearless Assasin 120':

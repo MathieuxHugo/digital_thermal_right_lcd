@@ -84,16 +84,20 @@
         "gpu_usage": "seconds"
       }
     },
-    "time_cpu": {
-      "type": "static",
-      "mappings": {
-        "cpu_temp": "hours",
-        "cpu_usage": "minutes"
-      }
-    },
     "time_gpu": {
       "type": "static",
       "mappings": {
+        "cpu_temp": "hours",
+        "cpu_usage": "minutes",
+        "gpu_temp": "gpu_temp",
+        "gpu_usage": "gpu_usage"
+      }
+    },
+    "time_cpu": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "cpu_temp",
+        "cpu_usage": "cpu_usage",
         "gpu_temp": "hours",
         "gpu_usage": "minutes"
       }
