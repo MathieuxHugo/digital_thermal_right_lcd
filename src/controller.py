@@ -11,6 +11,8 @@ import os
 import sys
 
 
+MINIMUM_MESSAGE_LENGTH = 330  # Minimum length of the message to send to the device
+
 digit_mask = np.array(
     [
         [1, 1, 1, 0, 1, 1, 1],  # 0
@@ -97,6 +99,8 @@ class Controller:
 
     def send_packets(self):
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(self.number_of_leds)])
+        if len(message) < MINIMUM_MESSAGE_LENGTH:
+            message += "00" * (MINIMUM_MESSAGE_LENGTH - len(message))
         packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
         packets = message[128-len(self.HEADER):]
