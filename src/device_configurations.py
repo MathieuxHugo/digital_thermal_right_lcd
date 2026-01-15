@@ -10,7 +10,7 @@ def _parse_led_range(range_spec):
     Args:
         range_spec: Can be:
             - A list: returned as-is
-            - A dict with "type": "classic", "start", "count"
+            - A dict with "type": "classic", "start", "stop"
             - A dict with "type": "reversed", "start", "stop"
     
     Returns:
@@ -23,10 +23,10 @@ def _parse_led_range(range_spec):
         range_type = range_spec.get("type", "classic")
         
         if range_type == "classic":
-            # Continuous range: start to start+count
+            # Continuous range: start to stop
             start = range_spec.get("start", 0)
-            count = range_spec.get("count", 1)
-            return list(range(start, start + count))
+            stop = range_spec.get("stop", 1)
+            return list(range(start, stop))
         
         elif range_type == "reversed":
             # Reversed range: start down to stop with step
@@ -137,10 +137,14 @@ def load_device_config_from_json(json_path):
         return None
 
 
-def get_device_config(config_name):
+def get_device_config(config_name, config_path=None):
     """Get a device configuration by name."""
     # Build path to config file
-    config_dir = Path(__file__).parent / "device_configs"
+    if config_path:
+        config_dir = Path(config_path).parent/"src"/"device_configs"
+    else:
+        config_dir = Path(__file__).parent / "device_configs"
+    
     config_file = config_dir / f"{config_name.lower().replace(' ', '_')}.json"
     
     if config_file.exists():

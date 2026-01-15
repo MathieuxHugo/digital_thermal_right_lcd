@@ -60,7 +60,8 @@ class Controller:
         self.dev = self.get_device()
         self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
         # default to PA120 configuration until config is loaded
-        self.leds_indexes = get_device_config('Pearless Assasin 120').leds_indexes
+        self.config_path = config_path
+        self.leds_indexes = get_device_config('Pearless Assasin 120', config_path).leds_indexes
         self.number_of_leds = len(self.leds_indexes['all'])
         self.leds = np.array([0] * self.number_of_leds)
         # Configurable config path
@@ -163,7 +164,7 @@ class Controller:
             PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
             # Use device_configurations to obtain leds_indexes and supported display modes
             layout_name = self.config.get('layout_mode', 'Pearless Assasin 120')
-            device_conf = get_device_config(layout_name)
+            device_conf = get_device_config(layout_name, self.config_path)
             self.leds_indexes = device_conf.leds_indexes
             self.number_of_leds = len(self.leds_indexes['all'])
 
@@ -231,7 +232,7 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
-            device_conf = get_device_config('Pearless Assasin 120')
+            device_conf = get_device_config('Pearless Assasin 120', self.config_path)
             self.leds_indexes = device_conf.leds_indexes
             self.number_of_leds = len(self.leds_indexes['all'])
             # Use factory for default displayer as well

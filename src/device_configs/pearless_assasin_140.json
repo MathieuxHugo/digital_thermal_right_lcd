@@ -57,7 +57,7 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 93}
+      "leds": {"type": "classic", "start": 0, "stop": 93}
     },
     "percent_led": 0,
     "usage": {

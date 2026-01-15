@@ -4,28 +4,28 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 84}
+      "leds": {"type": "classic", "start": 0, "stop": 84}
     },
     "cpu": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 42}
+      "leds": {"type": "classic", "start": 0, "stop": 42}
     },
     "gpu": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 42, "count": 42}
+      "leds": {"type": "classic", "start": 42, "stop": 84}
     },
     "cpu_led": [0, 1],
     "cpu_temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "classic", "start": 2, "count": 21}
+      "leds": {"type": "classic", "start": 2, "stop": 23}
     },
     "cpu_celsius": 23,
     "cpu_fahrenheit": 24,
     "cpu_usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "classic", "start": 25, "count": 16}
+      "leds": {"type": "classic", "start": 25, "stop": 41}
     },
     "cpu_percent_led": 41,
     "gpu_led": [82, 83],

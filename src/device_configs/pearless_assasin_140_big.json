@@ -57,11 +57,11 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 124}
+      "leds": {"type": "classic", "start": 0, "stop": 124}
     },
     "bottom_right": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 10}
+      "leds": {"type": "classic", "start": 0, "stop": 10}
     },
     "percent_led": 10,
     "usage": {
@@ -76,11 +76,11 @@
     },
     "middle_led": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 56, "count": 14}
+      "leds": {"type": "classic", "start": 56, "stop": 70}
     },
     "right_led": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 117, "count": 7}
+      "leds": {"type": "classic", "start": 117, "stop": 124}
     },
     "watt": {
       "type": "digit",

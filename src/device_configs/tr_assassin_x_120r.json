@@ -54,7 +54,7 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "count": 31}
+      "leds": {"type": "classic", "start": 0, "stop": 31}
     },
     "digit_frame": {
       "type": "digit",
