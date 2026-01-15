@@ -67,12 +67,12 @@
     "usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 26, "stop": 10, "step": -1}
+      "leds": {"type": "reversed", "start": 26, "stop": 10}
     },
     "frequency": {
       "type": "digit",
       "count": 4,
-      "leds": {"type": "reversed", "start": 55, "stop": 27, "step": -1}
+      "leds": {"type": "reversed", "start": 55, "stop": 27}
     },
     "middle_led": {
       "type": "leds",
@@ -85,12 +85,12 @@
     "watt": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 91, "stop": 70, "step": -1}
+      "leds": {"type": "reversed", "start": 91, "stop": 70}
     },
     "temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 114, "stop": 93, "step": -1}
+      "leds": {"type": "reversed", "start": 114, "stop": 93}
     },
     "cpu_led": 116,
     "gpu_led": 115,

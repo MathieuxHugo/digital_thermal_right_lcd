@@ -10,9 +10,8 @@ def _parse_led_range(range_spec):
     Args:
         range_spec: Can be:
             - A list: returned as-is
-            - A dict with "type": "range", "start", "stop", "step"
             - A dict with "type": "classic", "start", "count"
-            - A dict with "type": "reversed", "start", "stop", "step"
+            - A dict with "type": "reversed", "start", "stop"
     
     Returns:
         List of LED indices
@@ -33,15 +32,7 @@ def _parse_led_range(range_spec):
             # Reversed range: start down to stop with step
             start = range_spec.get("start", 0)
             stop = range_spec.get("stop", 0)
-            step = range_spec.get("step", -1)
-            return list(range(start, stop, step))
-        
-        elif range_type == "range":
-            # Custom range with start, stop, step
-            start = range_spec.get("start", 0)
-            stop = range_spec.get("stop", 0)
-            step = range_spec.get("step", 1)
-            return list(range(start, stop, step))
+            return list(range(start, stop, -1))
     
     return []
 

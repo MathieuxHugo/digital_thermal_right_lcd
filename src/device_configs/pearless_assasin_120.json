@@ -32,14 +32,14 @@
     "gpu_temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 81, "stop": 60, "step": -1}
+      "leds": {"type": "reversed", "start": 81, "stop": 60}
     },
     "gpu_celsius": 59,
     "gpu_fahrenheit": 60,
     "gpu_usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 58, "stop": 42, "step": -1}
+      "leds": {"type": "reversed", "start": 58, "stop": 42}
     },
     "gpu_percent_led": 42
   },

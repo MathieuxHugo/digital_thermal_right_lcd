@@ -63,12 +63,12 @@
     "usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 16, "stop": 0, "step": -1}
+      "leds": {"type": "reversed", "start": 16, "stop": 0}
     },
     "frequency": {
       "type": "digit",
       "count": 4,
-      "leds": {"type": "reversed", "start": 44, "stop": 16, "step": -1}
+      "leds": {"type": "reversed", "start": 44, "stop": 16}
     },
     "cpu_led": 53,
     "gpu_led": 59,
