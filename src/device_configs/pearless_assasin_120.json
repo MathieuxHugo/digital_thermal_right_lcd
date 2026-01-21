@@ -1,0 +1,115 @@
+{
+  "name": "Pearless Assassin 120 ARGB",
+  "total_leds": 84,
+  "groups": {
+    "all": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "stop": 84}
+    },
+    "cpu": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "stop": 42}
+    },
+    "gpu": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 42, "stop": 84}
+    },
+    "cpu_led": [0, 1],
+    "cpu_temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "classic", "start": 2, "stop": 23}
+    },
+    "cpu_celsius": 23,
+    "cpu_fahrenheit": 24,
+    "cpu_usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "classic", "start": 25, "stop": 41}
+    },
+    "cpu_percent_led": 41,
+    "gpu_led": [82, 83],
+    "gpu_temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 81, "stop": 60}
+    },
+    "gpu_celsius": 59,
+    "gpu_fahrenheit": 60,
+    "gpu_usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "reversed", "start": 58, "stop": 42}
+    },
+    "gpu_percent_led": 42
+  },
+  "display_modes": {
+    "alternate_time": {
+      "type": "alternating",
+      "displays": [
+        "time_cpu",
+        "time_gpu"
+      ]
+    },
+    "metrics": {
+      "type": "static",
+      "mappings": {
+        "cpu_led": "on",
+        "cpu_percent_led": "on",
+        "cpu_temp_unit": "on",
+        "cpu_temp": "cpu_temp",
+        "cpu_usage": "cpu_usage",
+        "gpu_led": "on",
+        "gpu_percent_led": "on",
+        "gpu_temp_unit": "on",
+        "gpu_temp": "gpu_temp",
+        "gpu_usage": "gpu_usage"
+      }
+    },
+    "time": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "hours",
+        "cpu_usage": "minutes",
+        "gpu_usage": "seconds"
+      }
+    },
+    "time_gpu": {
+      "type": "static",
+      "mappings": {
+        "cpu_temp": "hours",
+        "cpu_usage": "minutes",
+        "gpu_led": "on",
+        "gpu_percent_led": "on",
+        "gpu_temp_unit": "on",
+        "gpu_temp": "gpu_temp",
+        "gpu_usage": "gpu_usage"
+      }
+    },
+    "time_cpu": {
+      "type": "static",
+      "mappings": {
+        "cpu_led": "on",
+        "cpu_percent_led": "on",
+        "cpu_temp_unit": "on",
+        "cpu_temp": "cpu_temp",
+        "cpu_usage": "cpu_usage",
+        "gpu_temp": "hours",
+        "gpu_usage": "minutes"
+      }
+    },
+    "alternate_time_with_seconds": {
+      "type": "alternating",
+      "displays": [
+        "time",
+        "metrics"
+      ]
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "all": "on"
+      }
+    }
+  }
+}

@@ -47,12 +47,12 @@ WantedBy=multi-user.target
 `python3 src/led_display_ui.py config.json`
 
 # Troubleshooting
-If the libhidapi is missing :
+## If the libhidapi is missing :
 ImportError: Unable to load any of the following libraries:libhidapi-hidraw.so libhidapi-hidraw.so.0 libhidapi-libusb.so libhidapi-libusb.so.0 libhidapi-iohidmanager.so libhidapi-iohidmanager.so.0 libhidapi.dylib hidapi.dll libhidapi-0.dll
 Install it with :
 `sudo apt update && sudo apt install libhidapi-hidraw0 libhidapi-libusb0`
 
-If the device can't be found : 
+## If the device can't be found : 
 "Error initializing HID device: unable to open device No device found, with VENDOR_ID: 1046, PRODUCT_ID: 32769"
 Try running the controller as root : 
 `sudo python3 src/controller.py config.json`
@@ -60,3 +60,6 @@ The correct way to fix this problem is to create a udev rule by editing this fil
 `sudo nano /etc/udev/rules.d/99-hid-device.rules`
 and paste this line : 
 `SUBSYSTEM=="usb", ATTRS{idVendor}=="0416", ATTRS{idProduct}=="8001", MODE="0666"`
+
+## If cpu power doesn't work
+Try running the controller as root or with sudo, alternatively you can give reading access to "/sys/class/powercap/intel-rapl:0/energy_uj" or "/sys/class/powercap/amd-rapl:0/energy_uj" with `sudo chmod +r /sys/class/powercap/intel-rapl:0/energy_uj` (The path may vary depending on your system).

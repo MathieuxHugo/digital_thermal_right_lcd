@@ -1,0 +1,102 @@
+{
+  "name": "Pearless Assassin 140 BIG ARGB",
+  "total_leds": 124,
+  "display_modes": {
+    "gpu": {
+      "type": "static",
+      "mappings": {
+        "usage": "gpu_usage",
+        "frequency": "gpu_frequency",
+        "temp": "gpu_temp",
+        "watt": "gpu_watt"
+      }
+    },
+    "cpu": {
+      "type": "static",
+      "mappings": {
+        "usage": "cpu_usage",
+        "frequency": "cpu_frequency",
+        "temp": "cpu_temp",
+        "watt": "cpu_watt"
+      }
+    },
+    "alternate_devices": {
+      "type": "alternating",
+      "interval": 5,
+      "displays": [
+        {
+          "name": "cpu_metrics",
+          "mappings": {
+            "usage": "cpu_usage",
+            "frequency": "cpu_frequency",
+            "temp": "cpu_temp",
+            "watt": "cpu_watt"
+          }
+        },
+        {
+          "name": "gpu_metrics",
+          "mappings": {
+            "usage": "gpu_usage",
+            "frequency": "gpu_frequency",
+            "temp": "gpu_temp",
+            "watt": "gpu_watt"
+          }
+        }
+      ]
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "usage": "debug",
+        "frequency": "debug",
+        "temp": "debug",
+        "watt": "debug"
+      }
+    }
+  },
+  "groups": {
+    "all": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "stop": 124}
+    },
+    "bottom_right": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 0, "stop": 10}
+    },
+    "percent_led": 10,
+    "usage": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "reversed", "start": 26, "stop": 10}
+    },
+    "frequency": {
+      "type": "digit",
+      "count": 4,
+      "leds": {"type": "reversed", "start": 55, "stop": 27}
+    },
+    "middle_led": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 56, "stop": 70}
+    },
+    "right_led": {
+      "type": "leds",
+      "leds": {"type": "classic", "start": 117, "stop": 124}
+    },
+    "watt": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 91, "stop": 70}
+    },
+    "temp": {
+      "type": "digit",
+      "count": 3,
+      "leds": {"type": "reversed", "start": 114, "stop": 93}
+    },
+    "cpu_led": 116,
+    "gpu_led": 115,
+    "celsius": 93,
+    "fahrenheit": 92,
+    "watt_led": 70,
+    "frequency_led": 27
+  }
+}
