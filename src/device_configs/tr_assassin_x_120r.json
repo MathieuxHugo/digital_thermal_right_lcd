@@ -4,43 +4,38 @@
   "display_modes": {
     "alternate_metrics": {
       "type": "alternating",
-      "interval": 5,
       "displays": [
-        {
-          "name": "cpu_metrics",
-          "mappings": {
-            "digit_frame": "cpu_temp"
-          }
-        },
-        {
-          "name": "gpu_metrics",
-          "mappings": {
-            "digit_frame": "gpu_temp"
-          }
-        }
+        "cpu_temp",
+        "cpu_usage",
+        "gpu_temp",
+        "gpu_usage"
       ]
     },
     "cpu_temp": {
       "type": "static",
       "mappings": {
+        "cpu_temp_unit": "on",
         "digit_frame": "cpu_temp"
       }
     },
     "gpu_temp": {
       "type": "static",
       "mappings": {
+        "gpu_temp_unit": "on",
         "digit_frame": "gpu_temp"
       }
     },
     "cpu_usage": {
       "type": "static",
       "mappings": {
+        "cpu_percent_led": "on",
         "digit_frame": "cpu_usage"
       }
     },
     "gpu_usage": {
       "type": "static",
       "mappings": {
+        "gpu_percent_led": "on",
         "digit_frame": "gpu_usage"
       }
     },
@@ -61,9 +56,12 @@
       "count": 3,
       "leds": [14, 9, 10, 15, 13, 12, 11, 21, 16, 17, 22, 20, 19, 18, 28, 23, 24, 29, 27, 26, 25]
     },
-    "celsius": 6,
-    "fahrenheit": 7,
-    "percent_led": 8,
+    "cpu_celsius": 6,
+    "cpu_fahrenheit": 7,
+    "gpu_celsius": 6,
+    "gpu_fahrenheit": 7,
+    "gpu_percent_led": 8,
+    "cpu_percent_led": 8,
     "gpu_led": [4, 5],
     "cpu_led": [2, 3]
   }
