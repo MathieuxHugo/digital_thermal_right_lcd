@@ -4,7 +4,7 @@ This document explains the structure and usage of device configuration JSON file
 
 ## Overview
 
-Device configuration files define how ARGB coolers and their LED layouts are structured, which groups of LEDs display which metrics, and what display modes are available. Each configuration is device-specific and maps physical LED positions to logical groups.
+Device configuration files define how ARGB coolers and their LED layouts are structured, which groups of LEDs display which metrics, and what display modes are available. Each configuration is device-specific and maps physical LED positions to logical groups that represent system metrics (CPU/GPU temperature, usage, frequency, power consumption, etc.).
 
 ## File Structure
 
@@ -39,9 +39,7 @@ The total number of addressable LEDs on the device. This defines the valid range
 
 ## Groups Section
 
-The `groups` object defines logical groupings of LEDs. Groups serve two purposes:
-1. **Display groups**: Map physical LEDs to metrics (temperature, usage, etc.)
-2. **LED range groups**: Define ranges of LEDs for bulk operations
+The `groups` object defines logical groupings of LEDs. For example the group "cpu" represent all the led that are used for the cpu and "cpu_temp" is a subset of "cpu" containing only the leds that are used to display the cpu temperature. All leds are represented by a index between 0 and 'total_leds'.
 
 ### Group Types
 
@@ -80,8 +78,10 @@ A group used to display multi-digit numbers (temperature, usage percentage, etc.
 }
 ```
 
-- `count`: Number of digits to display
+- `count`: Number of digits that can be displayed
 - `leds`: Specifies which physical LEDs are used for this digit display
+
+The usage as generally the digit time eventhough the first digit can only display one as there is only two leds in it, for it to work properly the digit count must be set to 2.
 
 ### LED Range Specifications
 
@@ -102,19 +102,6 @@ Continuous backward range of LEDs. Useful when physical LEDs are arranged in rev
 {"type": "reversed", "start": 81, "stop": 60}
 ```
 **Result**: LEDs 81, 80, 79, ..., 61 (21 total LEDs, counting down)
-
-### Metric Display Groups
-
-Certain group names are reserved and used by the display logic to show specific metrics:
-
-| Group Name | Purpose | Type |
-|---|---|---|
-| `cpu_temp` / `gpu_temp` | Temperature display (7-segment digits) | Digit |
-| `cpu_usage` / `gpu_usage` | Usage percentage display (7-segment digits) | Digit |
-| `cpu_celsius` / `gpu_celsius` | Single LED for Celsius indicator | Integer |
-| `cpu_fahrenheit` / `gpu_fahrenheit` | Single LED for Fahrenheit indicator | Integer |
-| `cpu_percent_led` / `gpu_percent_led` | Single LED for percentage indicator | Integer |
-| `cpu_led` / `gpu_led` | Status indicator for CPU/GPU | Integer or Array |
 
 ### Example Groups Section
 
@@ -151,8 +138,7 @@ Certain group names are reserved and used by the display logic to show specific 
 ---
 
 ## Display Modes Section
-
-Display modes define how information is shown on the LCD screen and which metrics are mapped to which display areas.
+Display modes determine how information appears on the LCD screen and define which metrics correspond to each display area. Every LED group that needs to be illuminated must be specified within the display mode. The temperature unit LEDs are managed through the "temp_unit" LED group, which is evaluated at runtime according to the configuration file.
 
 ### Display Mode Types
 
@@ -163,8 +149,14 @@ Displays metrics in a fixed configuration.
 "metrics": {
   "type": "static",
   "mappings": {
+    "cpu_led": "on",
+    "cpu_percent_led": "on",
+    "cpu_temp_unit": "on",
     "cpu_temp": "cpu_temp",
     "cpu_usage": "cpu_usage",
+    "gpu_led": "on",
+    "gpu_percent_led": "on",
+    "gpu_temp_unit": "on",
     "gpu_temp": "gpu_temp",
     "gpu_usage": "gpu_usage"
   }
@@ -175,15 +167,14 @@ Displays metrics in a fixed configuration.
 - `type`: Always `"static"`
 - `mappings`: Object mapping display positions to data sources
   - **Key**: Display area name (e.g., `cpu_temp`, `gpu_usage`)
-  - **Value**: Data source (metric name or special value like `"hours"`, `"minutes"`, `"seconds"` for time)
+  - **Value**: Data source (metric name or special value like `"hours"`, `"minutes"`, `"seconds"` for time) or '"on"' if the led is lit independently of any data source.
 
 #### Alternating Mode
-Cycles between multiple display configurations at a specified interval.
+Cycles through multiple display configurations. In this example, each display configuration may reference a different display mode; here, it alternates between the time configuration defined in this section and the metrics configuration defined above.
 
 ```json
 "alternate_time": {
   "type": "alternating",
-  "interval": 5,
   "displays": [
     {
       "name": "time_hours",
@@ -193,22 +184,13 @@ Cycles between multiple display configurations at a specified interval.
         "gpu_usage": "seconds"
       }
     },
-    {
-      "name": "metrics",
-      "mappings": {
-        "cpu_temp": "cpu_temp",
-        "cpu_usage": "cpu_usage",
-        "gpu_temp": "gpu_temp",
-        "gpu_usage": "gpu_usage"
-      }
-    }
+    "metrics"
   ]
 }
 ```
 
 **Properties:**
 - `type`: Always `"alternating"`
-- `interval`: Seconds between switching displays
 - `displays`: Array of display configurations, each with:
   - `name`: Identifier for this display configuration
   - `mappings`: Same structure as static mode mappings
@@ -232,135 +214,8 @@ The `mappings` object connects display areas to data sources. Common values incl
 | `"cpu_watt"` | CPU power consumption (W) |
 | `"gpu_watt"` | GPU power consumption (W) |
 
-### Example Display Modes Section
-
-```json
-"display_modes": {
-  "metrics": {
-    "type": "static",
-    "mappings": {
-      "cpu_temp": "cpu_temp",
-      "cpu_usage": "cpu_usage",
-      "gpu_temp": "gpu_temp",
-      "gpu_usage": "gpu_usage"
-    }
-  },
-  "time": {
-    "type": "static",
-    "mappings": {
-      "cpu_temp": "hours",
-      "cpu_usage": "minutes",
-      "gpu_usage": "seconds"
-    }
-  },
-  "alternate_time": {
-    "type": "alternating",
-    "interval": 5,
-    "displays": [
-      {
-        "name": "time_display",
-        "mappings": {
-          "cpu_temp": "hours",
-          "cpu_usage": "minutes",
-          "gpu_usage": "seconds"
-        }
-      },
-      {
-        "name": "metrics_display",
-        "mappings": {
-          "cpu_temp": "cpu_temp",
-          "cpu_usage": "cpu_usage",
-          "gpu_temp": "gpu_temp",
-          "gpu_usage": "gpu_usage"
-        }
-      }
-    ]
-  },
-  "debug_ui": {
-    "type": "static",
-    "mappings": {
-      "cpu_temp": "debug",
-      "cpu_usage": "debug",
-      "gpu_temp": "debug",
-      "gpu_usage": "debug"
-    }
-  }
-}
-```
-
----
-
-## Complete Example
-
-Here's a minimal but complete device configuration:
-
-```json
-{
-  "name": "Example Cooler 120",
-  "total_leds": 50,
-  "groups": {
-    "all": {
-      "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 50}
-    },
-    "cpu_led": 0,
-    "gpu_led": 1,
-    "cpu_temp": {
-      "type": "digit",
-      "count": 2,
-      "leds": {"type": "classic", "start": 2, "stop": 16}
-    },
-    "cpu_celsius": 16,
-    "cpu_usage": {
-      "type": "digit",
-      "count": 2,
-      "leds": {"type": "classic", "start": 17, "stop": 31}
-    },
-    "cpu_percent_led": 31,
-    "gpu_temp": {
-      "type": "digit",
-      "count": 2,
-      "leds": {"type": "reversed", "start": 49, "stop": 35}
-    },
-    "gpu_celsius": 34,
-    "gpu_usage": {
-      "type": "digit",
-      "count": 2,
-      "leds": {"type": "reversed", "start": 33, "stop": 19}
-    },
-    "gpu_percent_led": 18
-  },
-  "display_modes": {
-    "metrics": {
-      "type": "static",
-      "mappings": {
-        "cpu_temp": "cpu_temp",
-        "cpu_usage": "cpu_usage",
-        "gpu_temp": "gpu_temp",
-        "gpu_usage": "gpu_usage"
-      }
-    },
-    "time": {
-      "type": "static",
-      "mappings": {
-        "cpu_temp": "hours",
-        "cpu_usage": "minutes",
-        "gpu_temp": "seconds",
-        "gpu_usage": "cpu_temp"
-      }
-    },
-    "debug_ui": {
-      "type": "static",
-      "mappings": {
-        "cpu_temp": "debug",
-        "cpu_usage": "debug",
-        "gpu_temp": "debug",
-        "gpu_usage": "debug"
-      }
-    }
-  }
-}
-```
+### Example
+For an example of device configuration you can use [the pearless assasin 120 configuration](src/device_configs/pearless_assasin_120.json)
 
 ---
 
@@ -399,40 +254,4 @@ Choose which display modes to support:
 ### Step 5: Create JSON File
 Save as `device_configs/{device_name_lowercase}.json` in the project.
 
----
-
-## Validation Tips
-
-When creating or modifying configurations:
-
-1. **LED Count**: Ensure digit groups have exactly `count * 7` LEDs
-2. **Range Bounds**: Verify `start` and `stop` values are within `[0, total_leds)`
-3. **No Overlaps**: Avoid assigning the same LED to multiple display metrics (overlaps are allowed for indicator LEDs)
-4. **Mappings**: Verify all mapping values reference valid data sources
-5. **Reversals**: Double-check reversed ranges count downward correctly
-
----
-
-## Implementation Details
-
-### How Configurations are Loaded
-
-The `device_configurations.py` module provides the following functions:
-
-- `load_device_config_from_json(json_path)`: Load a config from a JSON file
-- `get_device_config(config_name)`: Load a config by name (auto-converts to filename)
-- `_parse_led_range(range_spec)`: Parse LED range specifications into index lists
-- `_expand_led_group(group_spec)`: Expand group specifications into LED lists
-
-### Range Parsing Logic
-
-**Classic Range:**
-```
-start: 2, stop: 23  →  [2, 3, 4, ..., 21, 22]  (21 LEDs)
-```
-
-**Reversed Range:**
-```
-start: 81, stop: 60  →  [81, 80, 79, ..., 61]  (21 LEDs)
-```
 
