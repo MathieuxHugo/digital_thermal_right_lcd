@@ -1,5 +1,5 @@
 {
-    "display_mode": "time_gpu",
+    "display_mode": "alternate_metrics",
     "metrics": {
         "colors": [
             "00ffff",
@@ -267,5 +267,5 @@
     "vendor_id": "0x0416",
     "cpu_temperature_unit": "celsius",
     "gpu_temperature_unit": "celsius",
-    "layout_mode": "Pearless Assasin 120"
+    "layout_mode": "TR Assassin X 120R"
 }
