@@ -46,32 +46,22 @@
   "display_modes": {
     "alternate_time": {
       "type": "alternating",
-      "interval": 5,
       "displays": [
-        {
-          "name": "time_hours",
-          "mappings": {
-            "cpu_temp": "hours",
-            "cpu_usage": "minutes",
-            "gpu_usage": "seconds"
-          }
-        },
-        {
-          "name": "metrics",
-          "mappings": {
-            "cpu_temp": "cpu_temp",
-            "cpu_usage": "cpu_usage",
-            "gpu_temp": "gpu_temp",
-            "gpu_usage": "gpu_usage"
-          }
-        }
+        "time_cpu",
+        "time_gpu"
       ]
     },
     "metrics": {
       "type": "static",
       "mappings": {
+        "cpu_led": "on",
+        "cpu_percent_led": "on",
+        "cpu_temp_unit": "on",
         "cpu_temp": "cpu_temp",
         "cpu_usage": "cpu_usage",
+        "gpu_led": "on",
+        "gpu_percent_led": "on",
+        "gpu_temp_unit": "on",
         "gpu_temp": "gpu_temp",
         "gpu_usage": "gpu_usage"
       }
@@ -89,6 +79,9 @@
       "mappings": {
         "cpu_temp": "hours",
         "cpu_usage": "minutes",
+        "gpu_led": "on",
+        "gpu_percent_led": "on",
+        "gpu_temp_unit": "on",
         "gpu_temp": "gpu_temp",
         "gpu_usage": "gpu_usage"
       }
@@ -96,6 +89,9 @@
     "time_cpu": {
       "type": "static",
       "mappings": {
+        "cpu_led": "on",
+        "cpu_percent_led": "on",
+        "cpu_temp_unit": "on",
         "cpu_temp": "cpu_temp",
         "cpu_usage": "cpu_usage",
         "gpu_temp": "hours",
@@ -104,35 +100,15 @@
     },
     "alternate_time_with_seconds": {
       "type": "alternating",
-      "interval": 5,
       "displays": [
-        {
-          "name": "time_with_seconds",
-          "mappings": {
-            "cpu_temp": "hours",
-            "cpu_usage": "minutes",
-            "gpu_temp": "seconds",
-            "gpu_usage": "cpu_temp"
-          }
-        },
-        {
-          "name": "metrics",
-          "mappings": {
-            "cpu_temp": "cpu_temp",
-            "cpu_usage": "cpu_usage",
-            "gpu_temp": "gpu_temp",
-            "gpu_usage": "gpu_usage"
-          }
-        }
+        "time",
+        "metrics"
       ]
     },
     "debug_ui": {
       "type": "static",
       "mappings": {
-        "cpu_temp": "debug",
-        "cpu_usage": "debug",
-        "gpu_temp": "debug",
-        "gpu_usage": "debug"
+        "all": "on"
       }
     }
   }

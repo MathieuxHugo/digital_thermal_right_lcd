@@ -14,28 +14,20 @@ except Exception as e:
 
 
 class Metrics:
+    METRICS_KEYS = [
+        'cpu_temp',
+        'gpu_temp',
+        'cpu_usage',
+        'gpu_usage',
+        'cpu_frequency',
+        'gpu_frequency',
+        'cpu_power',
+        'gpu_power',
+    ]
     def __init__(self, update_interval=0.5):
         self.update_interval = update_interval # seconds
-        self.metrics_functions = {
-            'cpu_temp': None,
-            'gpu_temp': None,
-            'cpu_usage': None,
-            'gpu_usage': None,
-            'cpu_frequency': None,
-            'gpu_frequency': None,
-            'cpu_power': None,
-            'gpu_power': None,
-        }
-        self.metrics = {
-            'cpu_temp': 0,
-            'gpu_temp': 0,
-            'cpu_usage': 0,
-            'gpu_usage': 0,
-            'cpu_frequency': 0,
-            'gpu_frequency': 0,
-            'cpu_power': 0,
-            'gpu_power': 0,
-        }
+        self.metrics_functions = {key: None for key in self.METRICS_KEYS}
+        self.metrics = {key: 0 for key in self.METRICS_KEYS}
         try:
             device_count = pyamdgpuinfo.detect_gpus()
             if device_count > 0:
@@ -54,7 +46,6 @@ class Metrics:
             'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,],
             'cpu_frequency': [get_cpu_frequency_psutil, get_cpu_frequency_proc],
             'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
-            # try multiple strategies for CPU power: sysfs scanning, RAPL, turbostat
             'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat, self.get_cpu_power],
             'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, get_gpu_power_nvidia_smi_alt, self.get_gpu_power_amdgpuinfo],
         }

@@ -149,7 +149,7 @@ class Controller:
                 else:
                     start_color, end_color = split_color
 
-                    factor = 1 - abs((self.cpt%self.cycle_duration) - (self.cycle_duration/2)) / (self.cycle_duration/2)
+                    factor = 1 - abs((self.cpt%self.cycle_duration)/(self.cycle_duration)-1)
                 
                 colors.append(interpolate_color(start_color, end_color, factor))
             else:
@@ -167,7 +167,10 @@ class Controller:
             device_conf = get_device_config(layout_name, self.config_path)
             self.leds_indexes = device_conf.leds_indexes
             self.number_of_leds = len(self.leds_indexes['all'])
-
+            self.temp_unit = {
+                "cpu": self.config.get('cpu_temperature_unit', 'celsius'),
+                "gpu": self.config.get('gpu_temperature_unit', 'celsius'),
+            }
             self.metrics_max_value = {
                 "cpu_temp": self.config.get('cpu_max_temp', 90),
                 "gpu_temp": self.config.get('gpu_max_temp', 90),
@@ -266,18 +269,14 @@ class Controller:
                 time.sleep(5)
             else:
                 # Delegate the per-layout display construction to the displayer
-                try:
-                    leds_mask, colors = self.displayer.get_state(self.display_mode, self.cpt)
-                    # ensure arrays are numpy arrays of correct length
-                    self.leds = np.array(leds_mask, dtype=int)
-                    self.colors = np.array(colors)
-                except Exception as e:
-                    print(f"Error generating display state: {e}")
-                    # fallback to blank
-                    self.leds = np.array([0] * self.number_of_leds)
-                    self.colors = np.array(["000000"] * self.number_of_leds)
 
-                self.cpt = (self.cpt + 1) % (self.cycle_duration*2)
+                leds_mask, colors, nb_displays = self.displayer.get_state(self.display_mode, self.cpt)
+                # ensure arrays are numpy arrays of correct length
+                self.leds = np.array(leds_mask, dtype=int)
+                self.colors = np.array(colors)
+            
+
+                self.cpt = (self.cpt + 1) % (self.cycle_duration*nb_displays)
                 self.send_packets()
             time.sleep(self.update_interval)
 

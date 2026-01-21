@@ -1,6 +1,6 @@
 import numpy as np
 import datetime
-
+from metrics import Metrics
 
 class Displayer:
     # digit and letter masks used to convert numbers to segment arrays
@@ -45,11 +45,11 @@ class Displayer:
         else:
             return [number]
 
-    def get_number_array(self, temp, array_length=3, fill_value=-1):
-        if temp < 0:
+    def get_number_array(self, number, array_length=3, fill_value=-1):
+        if number < 0:
             return [fill_value] * array_length
         else:
-            narray = self._number_to_array(temp)
+            narray = self._number_to_array(number)
             if len(narray) != array_length:
                 if len(narray) < array_length:
                     narray = [fill_value] * (array_length - len(narray)) + narray
@@ -68,57 +68,6 @@ class Displayer:
         else:
             leds[idxs] = value
 
-    def set_temp(self, leds, temperature: int, device='cpu', unit="celsius"):
-        if temperature is None:
-            return
-        if temperature < 1000:
-            arr = self.digit_mask[self.get_number_array(temperature)].flatten()
-            # try device-specific key first, fall back to generic keys
-            self._set_leds(leds, device + '_temp', arr)
-            self._set_leds(leds, 'temp', arr)
-            # device-specific unit leds
-            if unit == "celsius":
-                self._set_leds(leds, device + '_celsius', 1)
-                # fallback generic
-                self._set_leds(leds, 'celsius', 1)
-            elif unit == "fahrenheit":
-                self._set_leds(leds, device + '_fahrenheit', 1)
-                self._set_leds(leds, 'fahrenheit', 1)
-        else:
-            raise Exception("The numbers displayed on the temperature LCD must be less than 1000")
-
-    def set_usage(self, leds, usage: int, device='cpu'):
-        if usage is None:
-            return
-        if usage < 200:
-            arr = np.concatenate(([int(usage >= 100)] * 2, self.digit_mask[self.get_number_array(usage, array_length=2)].flatten()))
-            # try device-specific usage first, fallback handled inside _set_leds
-            self._set_leds(leds, device + '_usage', arr)
-            self._set_leds(leds, 'usage', arr)
-            # try device specific percent led and generic percent led
-            self._set_leds(leds, device + '_percent_led', 1)
-            self._set_leds(leds, 'percent_led', 1)
-        else:
-            raise Exception("The numbers displayed on the usage LCD must be less than 200")
-
-    def set_frequency(self, leds, frequency: int):
-        """Display frequency on the 4-digit frequency field and light the frequency unit LED."""
-        if frequency is None:
-            return
-        # frequency displayed on 4 digits (4 * 7 = 28 LEDs)
-        arr = self.digit_mask[self.get_number_array(frequency, array_length=4)].flatten()
-        self._set_leds(leds, 'frequency', arr)
-        # light the frequency unit led if present
-        self._set_leds(leds, 'frequency_led', 1)
-
-    def set_power(self, leds, power: int):
-        """Display power (watts) on the 3-digit watt field and light the watt unit LED."""
-        if power is None:
-            return
-        arr = self.digit_mask[self.get_number_array(power, array_length=3)].flatten()
-        self._set_leds(leds, 'watt', arr)
-        self._set_leds(leds, 'watt_led', 1)
-
     def clamp_metric_factor(self, metric, value):
         # compute factor between min and max for color interpolation logic used by controller.get_config_colors
         minv = self.metrics_min_value.get(metric)
@@ -132,87 +81,55 @@ class Displayer:
             factor = 0
         return factor
 
-    def _apply_mapping(self, leds, led_group, data_source, metrics_vals, now):
+    def _apply_mapping(self, leds, led_group, data_source, time_dict):
         """Apply a single mapping: display data_source on led_group."""
-        if data_source == "debug":
-            # Debug mode: light all LEDs for this group
-            self._set_leds(leds, led_group, 1)
-            return
+        if "temp_unit" in led_group:
+            unit = self.temp_unit[led_group.replace("_temp_unit", "")]
+            led_group = led_group.replace("temp_unit", unit.lower())
         
-        if data_source == "hours":
-            arr = np.concatenate((self.digit_mask[self.get_number_array(now.hour, array_length=2, fill_value=0)].flatten(), self.letter_mask["H"]))
-            self._set_leds(leds, led_group, arr)
-        elif data_source == "minutes":
-            arr = np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.minute, array_length=2, fill_value=0)].flatten()))
-            self._set_leds(leds, led_group, arr)
-        elif data_source == "seconds":
-            arr = np.concatenate(([0, 0], self.digit_mask[self.get_number_array(now.second, array_length=2, fill_value=0)].flatten()))
-            self._set_leds(leds, led_group, arr)
-        elif data_source in metrics_vals:
-            value = metrics_vals[data_source]
-            if value is None:
-                return
-            
-            # Light device LED based on data source
-            if data_source.startswith("gpu_"):
-                self._set_leds(leds, "gpu_led", 1)
-            elif data_source.startswith("cpu_"):
-                self._set_leds(leds, "cpu_led", 1)
-            
-            # Determine how to display the metric based on the LED group type
-            if "temp" in led_group:
-                try:
-                    self.set_temp(leds, value, device=led_group.replace('_temp', ''), unit=self.temp_unit.get(led_group.replace('_temp', ''), "celsius"))
-                except:
-                    # Fallback: treat as generic 3-digit number
-                    arr = self.digit_mask[self.get_number_array(value, array_length=3)].flatten()
-                    self._set_leds(leds, led_group, arr)
-            elif "usage" in led_group:
-                try:
-                    self.set_usage(leds, value, device=led_group.replace('_usage', ''))
-                except:
-                    # Fallback: treat as 2-digit percentage
-                    arr = np.concatenate(([int(value >= 100)] * 2, self.digit_mask[self.get_number_array(value, array_length=2)].flatten()))
-                    self._set_leds(leds, led_group, arr)
-            elif "frequency" in led_group:
-                try:
-                    self.set_frequency(leds, value)
-                except:
-                    # Fallback: treat as 4-digit number
-                    arr = self.digit_mask[self.get_number_array(value, array_length=4)].flatten()
-                    self._set_leds(leds, led_group, arr)
-            elif "watt" in led_group or "power" in led_group:
-                try:
-                    self.set_power(leds, value)
-                except:
-                    # Fallback: treat as 3-digit number
-                    arr = self.digit_mask[self.get_number_array(value, array_length=3)].flatten()
-                    self._set_leds(leds, led_group, arr)
-            else:
-                # Generic numeric display: determine array length based on LED group
-                try:
-                    idxs = self.leds_indexes.get(led_group)
-                    if idxs:
-                        array_length = len(idxs) // 7  # Assume 7 LEDs per digit
-                        arr = self.digit_mask[self.get_number_array(value, array_length=array_length)].flatten()
-                        self._set_leds(leds, led_group, arr)
-                except:
-                    pass
+        if data_source == "on":
+            self._set_leds(leds, led_group, 1)
+        elif data_source == "off":
+            self._set_leds(leds, led_group, 0)
+        else:
+            if data_source in time_dict:
+                value = time_dict[data_source]
+            elif data_source in Metrics.METRICS_KEYS:
+                metrics_vals = self.metrics.get_metrics(self.temp_unit)
+                value = metrics_vals[data_source]
+            if value is not None:
+                digit_count = self.device_config.get_digit_count(led_group)
+                if digit_count<len(str(value)):
+                    if len(self.leds_indexes[led_group])%7 == 0:
+                        print(f"Warning: {data_source} value {value} is too large to be displayed on {led_group} as it has only {digit_count} digits (if this is a mistake, consider increasing the digit count in the device configuration).") 
+                    prefix = [1]*(len(self.leds_indexes[led_group]) - digit_count*7)# one before the digits
+                else:
+                    prefix = [0]*(len(self.leds_indexes[led_group]) - digit_count*7)# nothing before the digits
 
-    def _execute_display_config(self, leds, colors, mappings, metrics_vals, now):
+                arr = np.concatenate([prefix, self.digit_mask[self.get_number_array(value, array_length=digit_count, fill_value=-1)].flatten()])
+                self._set_leds(leds, led_group, arr)
+
+
+                
+
+    def _execute_display_config(self, leds, colors, mappings):
         """Execute a display configuration defined by mappings."""
+        now = datetime.datetime.now()
+        time_dict = {
+            "hours": now.hour,
+            "minutes": now.minute,
+            "seconds": now.second,
+        }
         colors = self.metrics_colors
         for led_group, data_source in mappings.items():
             if data_source in ["hours", "minutes", "seconds"]:
                 colors[self.leds_indexes[led_group]] = self.time_colors[self.leds_indexes[led_group]]
-            self._apply_mapping(leds, led_group, data_source, metrics_vals, now)
+            self._apply_mapping(leds, led_group, data_source, time_dict)
         
 
     def _get_state_from_config(self, display_mode, cpt, leds, colors):
         """Get display state using JSON-based device configuration."""
-        metrics_vals = self.metrics.get_metrics(self.temp_unit)
-        now = datetime.datetime.now()
-        
+        nb_displays = 1
         display_mode_config = self.device_config.get_display_mode(display_mode)
         if not display_mode_config:
             return leds, colors
@@ -220,23 +137,23 @@ class Displayer:
         if display_mode_config.type == "static":
             # Static display: apply mappings once
             mappings = display_mode_config.mode_dict.get("mappings", {})
-            self._execute_display_config(leds, colors, mappings, metrics_vals, now)
+            self._execute_display_config(leds, colors, mappings)
         
         elif display_mode_config.type == "alternating":
             # Alternating display: cycle through displays
             displays = display_mode_config.displays
             if not displays:
                 return leds, colors
-            
+            nb_displays = len(displays)
             # Calculate which display to show based on cpt and interval
-            interval_ticks = int(display_mode_config.interval / self.update_interval)
-            display_index = (cpt // interval_ticks) % len(displays)
+            display_index = (cpt // self.cycle_duration) % len(displays)
             current_display = displays[display_index]
-            
+            if isinstance(current_display, str):
+                current_display = self.device_config.get_display_mode(current_display).mode_dict
             mappings = current_display.get("mappings", {})
-            self._execute_display_config(leds, colors, mappings, metrics_vals, now)
+            self._execute_display_config(leds, colors, mappings)
         
-        return leds, colors
+        return leds, colors, nb_displays
 
     def get_state(self, display_mode, cpt):
         """Get the LED state and colors for the current display mode."""

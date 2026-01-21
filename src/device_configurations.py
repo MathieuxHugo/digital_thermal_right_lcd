@@ -37,36 +37,6 @@ def _parse_led_range(range_spec):
     return []
 
 
-def _expand_led_group(group_spec):
-    """
-    Expand a group specification into LED indices.
-    
-    A group can be:
-    - An integer (single LED)
-    - A list of integers (specific LEDs)
-    - A dict with "type": "digit" or "leds" and range specification
-    """
-    if isinstance(group_spec, int):
-        return group_spec
-    
-    if isinstance(group_spec, list):
-        return group_spec
-    
-    if isinstance(group_spec, dict):
-        group_type = group_spec.get("type", "leds")
-        
-        if group_type == "digit":
-            # A digit is 7 LEDs
-            num_digits = group_spec.get("count", 1)
-            led_range = _parse_led_range(group_spec.get("leds", []))
-            # For digits, the range should contain 7*num_digits elements
-            return led_range
-        
-        elif group_type == "leds":
-            # Direct LED specification
-            return _parse_led_range(group_spec.get("leds", []))
-    
-    return []
 
 
 class DisplayMode:
@@ -89,18 +59,22 @@ class DeviceConfig:
     
     def __init__(self, config_dict):
         self.config_dict = config_dict
-        self.leds_indexes = self._build_leds_indexes()
+        self.leds_indexes, self.digit_count = self._build_leds_indexes()
         self.display_modes = self._build_display_modes()
     
     def _build_leds_indexes(self):
         """Build the leds_indexes dictionary from the JSON config."""
         leds_indexes = {}
+        digit_count = {}
         groups = self.config_dict.get("groups", {})
-        
         for group_name, group_spec in groups.items():
-            leds_indexes[group_name] = _expand_led_group(group_spec)
-        
-        return leds_indexes
+            if isinstance(group_spec, dict):
+                leds_indexes[group_name] = _parse_led_range(group_spec.get("leds", []))
+                if group_spec.get("type", "") == "digit":
+                    digit_count[group_name] = group_spec.get("count", 3)
+            else:
+                leds_indexes[group_name] = group_spec
+        return leds_indexes, digit_count
     
     def _build_display_modes(self):
         """Build the display_modes dictionary from the JSON config."""
@@ -117,6 +91,13 @@ class DeviceConfig:
         
         return display_modes_dict
     
+    def get_digit_count(self, group_name):
+        """Get the number of digit in a led group."""
+        if group_name not in self.digit_count:
+            return 3  # Default
+        else:
+            return self.digit_count[group_name]
+
     def get_display_mode(self, mode_name):
         """Get a display mode by name."""
         return self.display_modes.get(mode_name)
