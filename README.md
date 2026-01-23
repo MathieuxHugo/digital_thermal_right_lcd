@@ -1,7 +1,7 @@
 # digital_thermal_right_lcd
 A program that displays temperature on the thermal right cpu cooler's digital screen for Linux.
 
-# Phantom Spirit 120 evo exclusive with some ryzen cpu wattage readings from Zenpower kernel driver #
+# Phantom Spirit 120 evo exclusive branch with some ryzen cpu wattage readings from Zenpower kernel driver #
 
 # To build the controller :
 
@@ -65,3 +65,6 @@ and paste this line :
 
 ## If cpu power doesn't work
 Try running the controller as root or with sudo, alternatively you can give reading access to "/sys/class/powercap/intel-rapl:0/energy_uj" or "/sys/class/powercap/amd-rapl:0/energy_uj" with `sudo chmod +r /sys/class/powercap/intel-rapl:0/energy_uj` (The path may vary depending on your system).
+
+## If cpu power doesn't work and you have a Ryzen CPU
+make sure you have installed the zenpower kernel driver.
