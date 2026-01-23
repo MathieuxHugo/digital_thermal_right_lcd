@@ -3,179 +3,35 @@ import re
 import psutil
 import time
 import os
-
-from get_amd_power import CPUPower
+import json
+import glob
 
 try:
     import pyamdgpuinfo
 except Exception as e:
-    print("pyamdgpuinfo cannot start : ",str(e))
+    print("pyamdgpuinfo cannot start : ", str(e))
 
-
-
-class Metrics:
-    METRICS_KEYS = [
-        'cpu_temp',
-        'gpu_temp',
-        'cpu_usage',
-        'gpu_usage',
-        'cpu_frequency',
-        'gpu_frequency',
-        'cpu_power',
-        'gpu_power',
-    ]
-    def __init__(self, update_interval=0.5):
-        self.update_interval = update_interval # seconds
-        self.metrics_functions = {key: None for key in self.METRICS_KEYS}
-        self.metrics = {key: 0 for key in self.METRICS_KEYS}
-        try:
-            device_count = pyamdgpuinfo.detect_gpus()
-            if device_count > 0:
-                self.gpu = pyamdgpuinfo.get_gpu(0)
-            else:
-                print("No AMD GPU detected.")
-                self.gpu = -1
-        except Exception:
-            print("pyamdgpuinfo not installed. GPU temperature will not be available.")
-            self.gpu = None
-        self.cpu_power_reader = CPUPower()
-        candidates =  {
-            'cpu_temp': [get_cpu_temp_psutils,get_cpu_temp_linux,get_cpu_temp_windows_wmi,get_cpu_temp_windows_wintmp,get_cpu_temp_raspberry_pi],
-            'gpu_temp': [get_gpu_temp_nvidia,get_gpu_temp_wintemp, self.get_gpu_temp_amdgpuinfo],
-            'cpu_usage': [get_cpu_usage],
-            'gpu_usage': [get_gpu_usage_nvml,get_gpu_usage_nvidia_smi,self.get_gpu_usage_amd,],
-            'cpu_frequency': [get_cpu_frequency_psutil, get_cpu_frequency_proc],
-            'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
-            'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat, self.get_cpu_power],
-            'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, get_gpu_power_nvidia_smi_alt, self.get_gpu_power_amdgpuinfo],
-        }
-        for metric, functions in candidates.items():
-            for function in functions:
-                try:
-                    result = function()
-                    if result is not None:
-                        self.metrics[metric] = int(result)
-                        self.metrics_functions[metric] = function
-                        break
-                except Exception:
-                    continue
-            if self.metrics_functions[metric] is None:
-                print(f"Warning: No suitable function found for {metric}.")
-        self.last_update = time.time()
-
-    def get_metrics(self, temp_unit):
-        if time.time() - self.last_update < self.update_interval:
-            return self.metrics
-        else:
-            for metric, function in self.metrics_functions.items():
-                if function is not None:
-                    try:
-                        result = function()
-                        if result is None:
-                            self.metrics[metric] = 0
-                        else:
-                            self.metrics[metric] = int(result)
-                    except Exception as e:
-                        print(f"Error getting {metric}: {e}")
-            self.last_update = time.time()
-        for device in ["cpu", "gpu"]:
-            if temp_unit[device] == "fahrenheit":
-                self.metrics[f"{device}_temp"] = int(self.metrics[f"{device}_temp"] * 9 / 5 + 32)
-        return self.metrics
-
-    def get_gpu_usage_amd(self):
-        try:
-            if self.gpu is None:
-                return None
-            else:
-                return int(self.gpu.query_load()*100)
-        except Exception:
-            return None
-        
-    def get_cpu_power(self):
-        try:
-            return int(self.cpu_power_reader.compute_power_all_cores(self.update_interval))
-        except Exception as e:
-            print(f"Error getting CPU power: {e}")
-            return None
-
-    def get_gpu_temp_amdgpuinfo(self):
-        try:
-            return self.gpu.query_temperature()
-        except Exception as e:
-            print(f"Error getting AMD GPU temperature: {e}")
-            return None
-
-    def get_gpu_frequency_amdgpuinfo(self):
-        try:
-            # try common method names on pyamdgpuinfo GPU object
-            if self.gpu is None:
-                return None
-            for method in ('query_sclk','query_mclk'):
-                if hasattr(self.gpu, method):
-                    try:
-                        return int(getattr(self.gpu, method)()/10**6)
-                    except Exception:
-                        continue
-            # fallback: some versions provide a `query_clock` with a name
-            if hasattr(self.gpu, 'query_clock'):
-                try:
-                    return int(self.gpu.query_clock()/10**6)
-                except Exception:
-                    pass
-            return None
-        except Exception as e:
-            print(f"Error getting AMD GPU frequency: {e}")
-            return None
-
-    def get_gpu_power_amdgpuinfo(self):
-        try:
-            if self.gpu is None:
-                return None
-            for method in ('query_power','query_power_draw','query_power_watt'):
-                if hasattr(self.gpu, method):
-                    try:
-                        return int(getattr(self.gpu, method)())
-                    except Exception:
-                        continue
-            return None
-        except Exception as e:
-            print(f"Error getting AMD GPU power: {e}")
-            return None
+# --- FUNÇÕES AUXILIARES GLOBAIS ---
 
 def get_cpu_temp_psutils():
     try:
         if hasattr(psutil, 'sensors_temperatures'):
             temps = psutil.sensors_temperatures()
             if temps:
-                # Check common temperature sources
-                for key in ['coretemp', 'cpu_thermal', 'k10temp', 'acpitz']:
+                # Busca por sensores comuns em CPUs modernas
+                for key in ['zenpower', 'k10temp', 'coretemp', 'cpu_thermal']:
                     if key in temps and temps[key]:
                         return temps[key][0].current
     except Exception:
         return None
+
 def get_cpu_temp_linux():
     try:
         with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
             return float(f.read().strip()) / 1000.0
     except Exception:
         return None
-def get_cpu_temp_windows_wmi(): 
-    try:
-        import wmi
-        w = wmi.WMI(namespace="root\\wmi")
-        temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-        return (temperature_info.CurrentTemperature / 10.0) - 273.15
-    except Exception:
-        return None
 
-def get_cpu_temp_windows_wintmp():
-    try:
-        import WinTmp
-        return WinTmp.CPU_Temp()
-    except Exception:
-        return None
-    
 def get_cpu_temp_raspberry_pi():
     try:
         output = subprocess.check_output(['vcgencmd', 'measure_temp']).decode()
@@ -184,289 +40,278 @@ def get_cpu_temp_raspberry_pi():
         return None
 
 def get_gpu_temp_nvidia():
-    # Try NVIDIA GPU first
     try:
-        # Try using pynvml library
+        from pynvml import (nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, 
+                            nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU, nvmlShutdown)
+        nvmlInit()
+        handle = nvmlDeviceGetHandleByIndex(0)
+        temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
+        nvmlShutdown()
+        return temp
+    except:
         try:
-            from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, \
-                            nvmlDeviceGetTemperature, NVML_TEMPERATURE_GPU, nvmlShutdown
-            
-            nvmlInit()
-            device_count = nvmlDeviceGetCount()
-            
-            if device_count > 0:
-                handle = nvmlDeviceGetHandleByIndex(0)
-                temp = nvmlDeviceGetTemperature(handle, NVML_TEMPERATURE_GPU)
-                nvmlShutdown()
-                return temp
-            
-            nvmlShutdown()
-        except Exception:
-            # Try using nvidia-smi command
             output = subprocess.check_output(['nvidia-smi', '--query-gpu=temperature.gpu', '--format=csv,noheader']).decode()
             return float(output.strip().split('\n')[0])
-    except Exception:
-        return None
-
-def get_gpu_temp_wintemp():
-    try:
-        import WinTmp
-        return WinTmp.GPU_Temp()
-    except Exception:
-        return None
+        except:
+            return None
 
 def get_cpu_usage():
-    """Get CPU usage percentage."""
-    try:
-        return psutil.cpu_percent(interval=None)
-    except Exception:
-        print("Warning: Could not retrieve CPU usage.")
-        return None
+    return psutil.cpu_percent(interval=None)
 
 def get_gpu_usage_nvidia_smi():
     try: 
-        output = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=utilization.gpu',
-                '--format=csv,noheader']
-        ).decode().strip()
+        output = subprocess.check_output(['nvidia-smi', '--query-gpu=utilization.gpu', '--format=csv,noheader']).decode().strip()
         return int(output.split()[0])
     except Exception:
         return None
     
 def get_gpu_usage_nvml():
     try:
-        # NVIDIA GPUs using pynvml
-        from pynvml import (nvmlInit, nvmlShutdown,
-                        nvmlDeviceGetHandleByIndex,
-                        nvmlDeviceGetUtilizationRates)
+        from pynvml import (nvmlInit, nvmlShutdown, nvmlDeviceGetHandleByIndex, 
+                            nvmlDeviceGetUtilizationRates)
         nvmlInit()
-        try:
-            handle = nvmlDeviceGetHandleByIndex(0)
-            utilization = nvmlDeviceGetUtilizationRates(handle)
-            return int(utilization.gpu)
-        finally:
-            nvmlShutdown()
+        handle = nvmlDeviceGetHandleByIndex(0)
+        utilization = nvmlDeviceGetUtilizationRates(handle)
+        nvmlShutdown()
+        return int(utilization.gpu)
+    except:
+        return None
+
+def get_cpu_speed_psutil():
+    try:
+        freq = psutil.cpu_freq()
+        return int(freq.current) if freq and freq.current else None
     except Exception:
         return None
 
-# New helper functions for frequency and power
-
-def get_cpu_frequency_psutil():
+def get_cpu_speed_proc():
     try:
-        f = psutil.cpu_freq()
-        if f and f.current:
-            return int(f.current)
-    except Exception:
-        return None
-
-def get_cpu_frequency_proc():
-    try:
-        # Fallback to reading /proc/cpuinfo first "cpu MHz" entry
         with open('/proc/cpuinfo', 'r') as f:
             for line in f:
-                if 'cpu MHz' in line:
-                    parts = line.split(':')
-                    if len(parts) > 1:
-                        return int(float(parts[1].strip()))
+                if 'cpu MHz' in line.lower():
+                    match = re.search(r'(\d+\.?\d*)', line)
+                    return int(float(match.group(1))) if match else None
+        return None
     except Exception:
         return None
 
-
-def get_gpu_frequency_nvml():
+def get_gpu_speed_nvml():
     try:
-        from pynvml import (nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetClockInfo, nvmlShutdown, NVML_CLOCK_GRAPHICS)
+        from pynvml import (nvmlInit, nvmlShutdown, nvmlDeviceGetHandleByIndex, 
+                            nvmlDeviceGetClockInfo, NVML_CLOCK_GRAPHICS)
         nvmlInit()
+        handle = nvmlDeviceGetHandleByIndex(0)
+        clock = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_GRAPHICS)
+        nvmlShutdown()
+        return int(clock)
+    except:
+        return None
+
+def get_gpu_speed_nvidia_smi():
+    try:
+        output = subprocess.check_output(['nvidia-smi', '--query-gpu=clocks.current.graphics', '--format=csv,noheader']).decode().strip()
+        match = re.search(r'(\d+)', output)
+        return int(match.group(1)) if match else None
+    except Exception:
+        return None
+
+# --- CLASSE METRICS ---
+
+class Metrics:
+    def __init__(self, update_interval=0.5):
+        self.metrics_functions = {
+            'cpu_temp': None, 'gpu_temp': None, 'cpu_usage': None,
+            'gpu_usage': None, 'cpu_speed': None, 'gpu_speed': None,
+            'cpu_watts': None, 'gpu_watts': None
+        }
+        self.metrics = {
+            'cpu_temp': 0, 'gpu_temp': 0, 'cpu_usage': 0,
+            'gpu_usage': 0, 'cpu_speed': 0, 'gpu_speed': 0,
+            'cpu_watts': 0, 'gpu_watts': 0
+        }
+        
+        # Carregar GPU vendor da config
+        config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
         try:
-            handle = nvmlDeviceGetHandleByIndex(0)
-            clk = nvmlDeviceGetClockInfo(handle, NVML_CLOCK_GRAPHICS)
-            return int(clk/10**6)
-        finally:
-            nvmlShutdown()
-    except Exception:
-        return None
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                self.gpu_vendor = config.get('gpu_vendor', 'nvidia')
+        except:
+            self.gpu_vendor = 'nvidia'
 
+        # Inicialização AMD
+        self.gpu = None
+        if self.gpu_vendor == 'amd':
+            try:
+                if pyamdgpuinfo.detect_gpus() > 0:
+                    self.gpu = pyamdgpuinfo.get_gpu(0)
+            except Exception as e:
+                print(f"Erro ao inicializar AMD GPU: {e}")
 
-def get_gpu_frequency_nvidia_smi():
-    try:
-        output = subprocess.check_output(['nvidia-smi', '--query-gpu=clocks.gr', '--format=csv,noheader']).decode().strip()
-        # might return lines like "1500 MHz" or just numeric
-        val = output.split('\n')[0].strip()
-        return int(re.sub(r'[^0-9]', '', val))
-    except Exception:
-        return None
+        # Mapeamento de candidatos
+        candidates =  {
+            'cpu_temp': [get_cpu_temp_psutils, get_cpu_temp_linux, get_cpu_temp_raspberry_pi],
+            'gpu_temp': [get_gpu_temp_nvidia] if self.gpu_vendor == 'nvidia' else [self.get_gpu_temp_amdgpuinfo],
+            'cpu_usage': [get_cpu_usage],
+            'gpu_usage': [get_gpu_usage_nvml, get_gpu_usage_nvidia_smi] if self.gpu_vendor == 'nvidia' else [self.get_gpu_usage_amd],
+            'cpu_speed': [get_cpu_speed_psutil, get_cpu_speed_proc],
+            'gpu_speed': [get_gpu_speed_nvml, get_gpu_speed_nvidia_smi] if self.gpu_vendor == 'nvidia' else [self.get_gpu_speed_amd],
+            
+            # ATUALIZADO: Soma dos power inputs
+            'cpu_watts': [self.get_cpu_power_zenpower_sum, self.get_cpu_power_linux, self.get_cpu_power_estimate],
+            'gpu_watts': [self.get_gpu_power_nvidia] if self.gpu_vendor == 'nvidia' else [self.get_gpu_power_amd],
+        }
 
+        # Validação das funções
+        for metric, functions in candidates.items():
+            for function in functions:
+                try:
+                    result = function()
+                    if result is not None:
+                        self.metrics[metric] = int(result)
+                        self.metrics_functions[metric] = function
+                        break
+                except Exception as e:
+                    # print(f"Debug: Falha na função {function.__name__} para {metric}: {e}")
+                    continue
 
-def get_gpu_frequency_nvidia_smi_alt():
-    """Alternative NVIDIA GPU frequency retrieval.
-    Tries nvidia-smi with clocks.current.graphics (no units), then falls back to nvidia-settings query.
-    Returns MHz as int or None.
-    """
-    try:
-        # Try a newer/query field that may return numeric value without units
-        output = subprocess.check_output([
-            'nvidia-smi',
-            '--query-gpu=clocks.current.graphics',
-            '--format=csv,noheader,nounits'
-        ], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
-        if output:
-            val = output.split('\n')[0].strip()
-            return int(float(re.sub(r'[^0-9\.]', '', val)))
-    except Exception:
-        pass
+        self.last_update = time.time()
+        self.update_interval = update_interval
 
-    try:
-        # Fallback to nvidia-settings (if available). Use -t for terse/raw output when supported.
-        out = subprocess.check_output(['nvidia-settings', '-q', 'GPUCoreClock', '-t'], stderr=subprocess.DEVNULL, timeout=2).decode().strip()
-        # grab the first integer found
-        m = re.search(r"(\d+)", out)
-        if m:
-            return int(m.group(1))
-    except Exception:
-        pass
+    def get_metrics(self, temp_unit):
+        now = time.time()
+        if now - self.last_update < self.update_interval:
+            metrics = self.metrics.copy()
+            metrics['updated'] = False
+        else:
+            for metric, function in self.metrics_functions.items():
+                if function:
+                    try:
+                        result = function()
+                        self.metrics[metric] = int(result) if result is not None else 0
+                    except:
+                        self.metrics[metric] = 0
+            self.last_update = now
+            metrics = self.metrics.copy()
+            metrics['updated'] = True
 
-    return None
+        for device in ["cpu", "gpu"]:
+            if temp_unit.get(device) == "fahrenheit":
+                metrics[f"{device}_temp"] = int(metrics[f"{device}_temp"] * 9 / 5 + 32)
+        return metrics
 
-def get_cpu_power_rapl():
-    try:
-        # Try reading intel-rapl energy_uj counters and compute instantaneous power
-        base = '/sys/class/powercap'
-        import glob
-        rapl_dirs = glob.glob(base + '/intel-rapl:*')
-        if not rapl_dirs:
-            return None
-        # pick first package
-        energy_file = None
-        for d in rapl_dirs:
-            cand = d + '/intel-rapl:0/energy_uj'
-            if os.path.exists(cand):
-                energy_file = cand
-                break
-        if energy_file is None:
-            # try package-0 path
-            for d in rapl_dirs:
-                cand = d + '/energy_uj'
-                if os.path.exists(cand):
-                    energy_file = cand
-                    break
-        if energy_file is None:
-            return None
-        # sample energy over short interval
-        with open(energy_file, 'r') as f:
-            e1 = int(f.read().strip())
-        import time
-        time.sleep(0.1)
-        with open(energy_file, 'r') as f:
-            e2 = int(f.read().strip())
-        # energy in microjoules over dt seconds => watts = (e2-e1)/1e6/dt
-        dt = 0.1
-        watt = (e2 - e1) / 1e6 / dt
-        return int(abs(watt))
-    except Exception:
-        return None
+    # --- MÉTODOS DE POWER E AMD ---
 
-
-def get_cpu_power_turbostat():
-    """Try retrieving package power using turbostat command (may require root). Parse a 'PkgWatt' or similar entry.
-    Returns watts as int or None.
-    """
-    try:
-        out = subprocess.check_output(['turbostat', '--Summary'], stderr=subprocess.DEVNULL, timeout=2).decode()
-        # Look for a line containing 'Package' or 'PkgWatt' with a number
-        for line in out.splitlines():
-            m = re.search(r'(?:Package|PkgWatt|PkgW)\D*(\d+(?:\.\d+)?)', line, re.IGNORECASE)
-            if m:
-                return int(float(m.group(1)))
-        # Some turbostat variants print a header then a summary line; try to find a numeric column
-        nums = re.findall(r'\d+\.?\d*', out)
-        if nums:
-            return int(float(nums[-1]))
-    except Exception:
-        return None
-    return None
-
-
-def get_gpu_power_nvml():
-    try:
-        from pynvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetPowerUsage, nvmlShutdown
-        nvmlInit()
+    def get_cpu_power_zenpower_sum(self):
+        """Lê o consumo de energia (em Watts) do módulo zenpower e SOMA power1_input + power2_input"""
         try:
-            handle = nvmlDeviceGetHandleByIndex(0)
-            # returns milliwatts
-            mw = nvmlDeviceGetPowerUsage(handle)
-            return int(mw / 1000)
-        finally:
-            nvmlShutdown()
-    except Exception:
-        return None
-
-
-def get_gpu_power_nvidia_smi():
-    try:
-        output = subprocess.check_output(['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader']).decode().strip()
-        val = output.split('\n')[0].strip()
-        return int(float(re.sub(r'[^0-9\.]', '', val)))
-    except Exception:
-        return None
-
-def get_gpu_power_nvidia_smi_alt():
-    """Alternative NVIDIA GPU power retrieval.
-    Tries nvidia-smi with nounits, falls back to standard nvidia-smi parsing, then attempts to read sysfs hwmon entries.
-    Returns watts as int or None.
-    """
-    try:
-        # Prefer nounits format to avoid unit parsing issues
-        output = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader,nounits'],
-            stderr=subprocess.DEVNULL, timeout=2
-        ).decode().strip()
-        if output:
-            val = output.split('\n')[0].strip()
-            return int(float(re.sub(r'[^0-9\.]', '', val)))
-    except Exception:
-        pass
-
-    try:
-        # Fallback to standard nvidia-smi output (may include " W")
-        output = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=power.draw', '--format=csv,noheader'],
-            stderr=subprocess.DEVNULL, timeout=2
-        ).decode().strip()
-        if output:
-            val = output.split('\n')[0].strip()
-            return int(float(re.sub(r'[^0-9\.]', '', val)))
-    except Exception:
-        pass
-
-    try:
-        # Try reading possible sysfs hwmon entries under the DRM device for power information
-        base = '/sys/class/drm/card0/device'
-        if os.path.exists(base):
-            for root, dirs, files in os.walk(base):
-                for f in files:
-                    if 'power' in f or 'power1_input' in f:
-                        try:
-                            with open(os.path.join(root, f), 'r') as fh:
-                                txt = fh.read().strip()
-                                if txt:
-                                    # Some entries may be in microwatts or watts; attempt sensible int parse
-                                    val = re.sub(r'[^0-9\.]', '', txt)
-                                    if val:
-                                        return int(float(val))
-                        except Exception:
-                            continue
-    except Exception:
-        pass
-
-    return None
-
-def get_amd_cpu_power():
-    try:
-        output = subprocess.check_output(["rapl"], encoding="utf-8")
-        # Example output line: "Package Power: 65.14W"
-        for line in output.split('\n'):
-            if "Package sum" in line:
-                watts = float(line.split(":")[1].strip('W '))
-                return int(watts)
-    except Exception:
+            # Procura por pastas hwmon
+            base_dir = '/sys/class/hwmon'
+            hwmon_dirs = glob.glob(os.path.join(base_dir, 'hwmon*'))
+            
+            for hwmon in hwmon_dirs:
+                name_path = os.path.join(hwmon, 'name')
+                if os.path.exists(name_path):
+                    with open(name_path, 'r') as f:
+                        name = f.read().strip()
+                    
+                    if name == 'zenpower':
+                        total_watts = 0
+                        
+                        # Tenta ler power1_input (SVI2_P_Core)
+                        power1_path = os.path.join(hwmon, 'power1_input')
+                        if os.path.exists(power1_path):
+                            with open(power1_path, 'r') as pf:
+                                micros = int(pf.read().strip())
+                                total_watts += micros / 1_000_000  # Converte uW para W
+                        
+                        # Tenta ler power2_input (SVI2_P_SoC)
+                        power2_path = os.path.join(hwmon, 'power2_input')
+                        if os.path.exists(power2_path):
+                            with open(power2_path, 'r') as pf:
+                                micros = int(pf.read().strip())
+                                total_watts += micros / 1_000_000  # Converte uW para W
+                        
+                        # Retorna a soma total
+                        return int(total_watts)
+        except:
             return None
-    return None
+        return None
+
+    def get_cpu_power_zenpower(self):
+        """Lê o consumo de energia (em Watts) do módulo zenpower no Linux (apenas power1)"""
+        try:
+            # Procura por pastas hwmon
+            base_dir = '/sys/class/hwmon'
+            hwmon_dirs = glob.glob(os.path.join(base_dir, 'hwmon*'))
+            
+            for hwmon in hwmon_dirs:
+                name_path = os.path.join(hwmon, 'name')
+                if os.path.exists(name_path):
+                    with open(name_path, 'r') as f:
+                        name = f.read().strip()
+                    
+                    if name == 'zenpower':
+                        # Zenpower normalmente expõe power1_input (SVI2_P_Core) em microwatts
+                        power_path = os.path.join(hwmon, 'power1_input')
+                        if os.path.exists(power_path):
+                            with open(power_path, 'r') as pf:
+                                micros = int(pf.read().strip())
+                                return int(micros / 1_000_000) # Converte uW para W
+        except:
+            return None
+        return None
+
+    def get_cpu_power_linux(self):
+        try:
+            path = "/sys/class/powercap/intel-rapl/intel-rapl:0/energy_uj"
+            with open(path, 'r') as f:
+                curr_e = int(f.read().strip())
+                curr_t = time.time()
+                if hasattr(self, 'last_e'):
+                    energy_diff = curr_e - self.last_e
+                    time_diff = curr_t - self.last_t
+                    watts = (energy_diff / 1_000_000) / time_diff
+                    self.last_e, self.last_t = curr_e, curr_t
+                    return max(0, int(watts))
+                self.last_e, self.last_t = curr_e, curr_t
+                return 0
+        except: return None
+
+    def get_cpu_power_estimate(self):
+        try:
+            # Estimativa simples: Idle(15W) + Load%(Max TDP aprox 105W)
+            # Ajuste esses valores se quiser uma estimativa mais precisa na falta do zenpower
+            return int(15 + (105 * (psutil.cpu_percent() / 100.0)))
+        except: return None
+
+    def get_gpu_power_nvidia(self):
+        try:
+            from pynvml import (nvmlInit, nvmlShutdown, 
+                              nvmlDeviceGetHandleByIndex, nvmlDeviceGetPowerUsage)
+            nvmlInit()
+            handle = nvmlDeviceGetHandleByIndex(0)
+            power = int(nvmlDeviceGetPowerUsage(handle) / 1000)
+            nvmlShutdown()
+            return power
+        except: return None
+    
+    def get_gpu_power_amd(self):
+        """Lê o consumo da GPU AMD usando pyamdgpuinfo"""
+        try:
+            if self.gpu:
+                # query_power() retorna watts diretamente
+                return int(self.gpu.query_power())
+        except:
+            return None
+        return None
+
+    def get_gpu_usage_amd(self):
+        return int(self.gpu.query_load() * 100) if self.gpu else None
+
+    def get_gpu_temp_amdgpuinfo(self):
+        return self.gpu.query_temperature() if self.gpu else None
+
+    def get_gpu_speed_amd(self):
+        # query_sclk retorna Hz, dividimos por 1M para MHz
+        return int(self.gpu.query_sclk() / 1_000_000) if self.gpu else None
