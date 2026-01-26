@@ -254,4 +254,88 @@ Choose which display modes to support:
 ### Step 5: Create JSON File
 Save as `device_configs/{device_name_lowercase}.json` in the project.
 
+# Digit LED mapping : 
+Each index correspond to a LED, for the digits the LED mapping the indexes correspond to the following segments :
+```
+ 111
+0   2
+0   2
+0   2
+ 333
+4   6
+4   6
+4   6
+ 555
+```
+If you have a series of 3 digit that starts at the index 0 then the group description would be : 
 
+```json
+  "cpu_temp": {
+    "type": "digit",
+    "count": 3,
+    "leds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  },
+```
+or 
+```json
+  "cpu_temp": {
+    "type": "digit",
+    "count": 3,
+    "leds": {"type": "classic", "start": 0, "stop": 21}
+  },
+```
+
+But for your device the mapping may be different.
+
+### It may be reversed : 
+```
+ 555
+6   4
+6   4
+6   4
+ 333
+2   0
+2   0
+2   0
+ 111
+```
+
+In that case the mapping would be :
+```json
+  "cpu_temp": {
+    "type": "digit",
+    "count": 3,
+    "leds": [20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+  },
+```
+or 
+```json
+  "cpu_temp": {
+    "type": "digit",
+    "count": 3,
+    "leds": {"type": "reversed", "start": 20, "stop": -1}
+  },
+```
+Note that stop is not included in the range so to get to 0 you need to set -1.
+
+
+### or completely different : 
+```
+ 000
+5   1
+5   1
+5   1
+ 666
+4   2
+4   2
+4   2
+ 333
+```
+In that case the mapping should be :
+```json
+  "cpu_temp": {
+    "type": "digit",
+    "count": 3,
+    "leds": [5, 0, 1, 6, 4, 3, 2, 12,  7,  8, 13, 11, 10,  9, 19, 14, 15, 20, 18, 17, 16]
+  },
+```
