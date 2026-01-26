@@ -11,7 +11,7 @@ import os
 import sys
 
 
-MINIMUM_MESSAGE_LENGTH = 330  # Minimum length of the message to send to the device
+MINIMUM_MESSAGE_LENGTH = 504  # Minimum length of the message to send to the device
 
 digit_mask = np.array(
     [
@@ -101,12 +101,12 @@ class Controller:
     def send_packets(self):
         message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(self.number_of_leds)])
         if len(message) < MINIMUM_MESSAGE_LENGTH:
-            message += "00" * (MINIMUM_MESSAGE_LENGTH - len(message))
+            message += "FF" * (MINIMUM_MESSAGE_LENGTH - len(message))
         packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
         self.dev.write(packet0)
         packets = message[128-len(self.HEADER):]
         number_of_packets = int(np.ceil(len(packets)/128))
-        for i in range(int(np.ceil(number_of_packets))):
+        for i in range(number_of_packets):
             packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
             self.dev.write(packet)
             time.sleep(self.update_interval/(10+number_of_packets))  # small delay to avoid overwhelming the device
@@ -214,6 +214,9 @@ class Controller:
                 self.cycle_duration,
                 device_config=device_conf,
             )
+            nvme_disk=self.config.get('nvme_disk', None)
+            if nvme_disk is not None:
+                self.metrics.set_nvme_disk(nvme_disk)
         else:
             VENDOR_ID = 0x0416
             PRODUCT_ID = 0x8001

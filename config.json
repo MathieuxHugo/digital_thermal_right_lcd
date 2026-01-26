@@ -267,5 +267,6 @@
     "vendor_id": "0x0416",
     "cpu_temperature_unit": "celsius",
     "gpu_temperature_unit": "celsius",
-    "layout_mode": "TR Assassin X 120R"
+    "layout_mode": "Thermalright HR-10 2280 PRO",
+    "nvme_disk": "nvme0n1"
 }
