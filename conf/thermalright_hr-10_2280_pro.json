@@ -1,0 +1,89 @@
+{
+    "name": "Thermalright HR-10 2280 PRO",
+    "total_leds": 90,
+    "groups": {
+      "all": {
+        "type": "leds",
+        "leds": {"type": "classic", "start": 0, "stop": 38}
+      },
+      "digit": {
+        "type": "digit",
+        "count": 5,
+        "leds": {"type": "classic", "start": 0, "stop": 35}
+      },
+      "three_first_digit": {
+        "type": "digit",
+        "count": 3,
+        "leds": {"type": "classic", "start": 0, "stop": 21}
+      },
+      "two_last_digit": {
+        "type": "digit",
+        "count": 2,
+        "leds": {"type": "classic", "start": 21, "stop": 35}
+      },
+      "percent_led": 36,
+      "speed_unit_led": 37,
+      "degree_led": 35
+    },
+    "display_modes": {
+      "alternate_metrics": {
+        "type": "alternating",
+        "displays": [
+          "reading_speed",
+          "writting_speed",
+          "usage",
+          "temp"
+        ]
+      },
+      "reading_speed": {
+        "type": "static",
+        "mappings": {
+            "speed_unit_led": "on",
+            "digit": "nvme_read_speed"
+        }
+      },
+      "writting_speed": {
+        "type": "static",
+        "mappings": {
+            "speed_unit_led": "on",
+            "digit": "nvme_write_speed",
+            "degree_led": "on"
+        }
+      },
+      "time": {
+        "type": "static",
+        "mappings": {
+          "three_first_digit": "hours",
+          "two_last_digit": "minutes"
+        }
+      },
+      "usage": {
+        "type": "static",
+        "mappings": {
+          "percent_led": "on",
+          "digit": "nvme_usage"
+        }
+      },
+      "temp": {
+        "type": "static",
+        "mappings": {
+            "two_last_digit": "nvme_temp",
+            "degree_led": "on"
+          }
+      },
+      "alternate_time_temp": {
+        "type": "alternating",
+        "displays": [
+          "time",
+          "temp"
+        ]
+      },
+      "debug_ui": {
+        "type": "static",
+        "mappings": {
+          "all": "on"
+        }
+      }
+    }
+  }
+  

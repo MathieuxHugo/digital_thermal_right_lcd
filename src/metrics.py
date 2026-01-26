@@ -23,9 +23,14 @@ class Metrics:
         'gpu_frequency',
         'cpu_power',
         'gpu_power',
+        "nvme_temp",
+        "nvme_read_speed",
+        "nvme_write_speed",
+        "nvme_usage",
     ]
-    def __init__(self, update_interval=0.5):
+    def __init__(self, update_interval=0.5, nvme_disk="nvme0n1"):
         self.update_interval = update_interval # seconds
+        self.nvme_disk = nvme_disk
         self.metrics_functions = {key: None for key in self.METRICS_KEYS}
         self.metrics = {key: 0 for key in self.METRICS_KEYS}
         try:
@@ -48,6 +53,7 @@ class Metrics:
             'gpu_frequency': [get_gpu_frequency_nvml, get_gpu_frequency_nvidia_smi, get_gpu_frequency_nvidia_smi_alt, self.get_gpu_frequency_amdgpuinfo],
             'cpu_power': [get_cpu_power_rapl, get_cpu_power_turbostat, self.get_cpu_power],
             'gpu_power': [get_gpu_power_nvml, get_gpu_power_nvidia_smi, get_gpu_power_nvidia_smi_alt, self.get_gpu_power_amdgpuinfo],
+            'nvme_temp': [get_nvme_temp_psutil],
         }
         for metric, functions in candidates.items():
             for function in functions:
@@ -61,12 +67,18 @@ class Metrics:
                     continue
             if self.metrics_functions[metric] is None:
                 print(f"Warning: No suitable function found for {metric}.")
-        self.last_update = time.time()
+        self.last_update = 0
+        self.last_time = 0
+        self.last_disk_io = None
+        self.nvme = True
 
     def get_metrics(self, temp_unit):
         if time.time() - self.last_update < self.update_interval:
             return self.metrics
         else:
+            if self.nvme:
+                self.nvme = self.get_nvme_metrics()
+
             for metric, function in self.metrics_functions.items():
                 if function is not None:
                     try:
@@ -82,6 +94,11 @@ class Metrics:
             if temp_unit[device] == "fahrenheit":
                 self.metrics[f"{device}_temp"] = int(self.metrics[f"{device}_temp"] * 9 / 5 + 32)
         return self.metrics
+
+    def set_nvme_disk(self, nvme_disk):
+        if nvme_disk != self.nvme_disk:
+            self.nvme = True
+        self.nvme_disk = nvme_disk
 
     def get_gpu_usage_amd(self):
         try:
@@ -142,6 +159,26 @@ class Metrics:
         except Exception as e:
             print(f"Error getting AMD GPU power: {e}")
             return None
+
+    def get_nvme_metrics(self):
+        """Sample NVMe speed/util with delta."""
+        try:
+            now = time.time()
+            counters = psutil.disk_io_counters(perdisk=True).get(self.nvme_disk)
+            if counters and self.last_disk_io:
+                dt = now - self.last_time
+                read_mb_s = int((counters.read_bytes - self.last_disk_io.read_bytes) / (1024**2 * dt))
+                write_mb_s = int((counters.write_bytes - self.last_disk_io.write_bytes) / (1024**2 * dt))
+                util_pct = (counters.busy_time - self.last_disk_io.busy_time) / (dt * 10)
+                self.metrics['nvme_read_speed'] = max(0, read_mb_s)
+                self.metrics['nvme_write_speed'] = max(0, write_mb_s)
+                self.metrics['nvme_usage'] = min(100, util_pct)
+            self.last_disk_io = counters
+            self.last_time = now
+            return True
+        except Exception as e:
+            print(f"Error getting nvme and utils: {e}")
+            return False
 
 def get_cpu_temp_psutils():
     try:
@@ -470,3 +507,17 @@ def get_amd_cpu_power():
     except Exception:
             return None
     return None
+
+def get_nvme_temp_psutil():
+    """Get NVMe temperature via psutil (lm-sensors backend)."""
+    try:
+        temps = psutil.sensors_temperatures()
+        # Common NVMe keys: 'nvme-0' or 'nvme-pci-*'
+        for key in temps:
+            if 'nvme' in key.lower() and temps[key]:
+                return int(temps[key][0].current)  # First sensor (composite/core)
+        return None
+    except Exception:
+        return None
+    
+
