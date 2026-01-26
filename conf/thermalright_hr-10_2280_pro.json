@@ -1,6 +1,6 @@
 {
     "name": "Thermalright HR-10 2280 PRO",
-    "total_leds": 90,
+    "total_leds": 38,
     "groups": {
       "all": {
         "type": "leds",

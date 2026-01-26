@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 
-def _parse_led_range(range_spec):
+def _parse_led_range(range_spec, group_name):
     """
     Parse a range specification into a list of indices.
     
@@ -26,12 +26,17 @@ def _parse_led_range(range_spec):
             # Continuous range: start to stop
             start = range_spec.get("start", 0)
             stop = range_spec.get("stop", 1)
+            if start > stop:
+                raise ValueError(f"The mapping of {group_name} is wrong : For 'classic' range, start should be < stop.")
             return list(range(start, stop))
         
         elif range_type == "reversed":
             # Reversed range: start down to stop with step
             start = range_spec.get("start", 0)
             stop = range_spec.get("stop", 0)
+            if start < stop:
+                raise ValueError(f"The mapping of {group_name} is wrong : For 'reversed' range, stop should be < start.")
+
             return list(range(start, stop, -1))
     
     return []
@@ -69,7 +74,7 @@ class DeviceConfig:
         groups = self.config_dict.get("groups", {})
         for group_name, group_spec in groups.items():
             if isinstance(group_spec, dict):
-                leds_indexes[group_name] = _parse_led_range(group_spec.get("leds", []))
+                leds_indexes[group_name] = _parse_led_range(group_spec.get("leds", []), group_name)
                 if group_spec.get("type", "") == "digit":
                     digit_count[group_name] = group_spec.get("count", 3)
             else:
