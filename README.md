@@ -17,7 +17,7 @@ A program that displays temperature on the thermal right cpu cooler's digital sc
 
 You may also launch it directcly with python
 
-`python3 src/controller.py config.json`
+`python3 src/controller.py conf`
 
 # Set up as a service so it start at each startup: 
 Create a file in /etc/systemd/system/digital_lcd_controller.service:
@@ -30,7 +30,7 @@ Description=Lcd screen controller
 After=network.target udev.service systemd-modules-load.service
 
 [Service]
-ExecStart=/path/to/the/executable /path/to/the/config.json
+ExecStart=/path/to/the/executable /path/to/the/conf_dir
 User=yourusername
 Group=yourusername
 Type=simple

@@ -122,9 +122,9 @@ def get_device_config(config_name, config_path=None):
     """Get a device configuration by name."""
     # Build path to config file
     if config_path:
-        config_dir = Path(config_path).parent/"src"/"device_configs"
+        config_dir = Path(config_path)
     else:
-        config_dir = Path(__file__).parent / "device_configs"
+        config_dir = Path(__file__).parent.parent / "conf"
     
     config_file = config_dir / f"{config_name.lower().replace(' ', '_')}.json"
     

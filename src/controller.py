@@ -9,6 +9,7 @@ import datetime
 import json
 import os
 import sys
+from pathlib import Path
 
 
 MINIMUM_MESSAGE_LENGTH = 330  # Minimum length of the message to send to the device
@@ -66,7 +67,7 @@ class Controller:
         self.leds = np.array([0] * self.number_of_leds)
         # Configurable config path
         if config_path is None:
-            self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
+            self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), Path(__file__).parent.parent / "conf"))
         else:
             self.config_path = config_path
         self.cpt = 0  # For alternate_time cycling
@@ -79,7 +80,7 @@ class Controller:
 
     def load_config(self):
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path+"/config.json", 'r') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error loading config: {e}")
@@ -289,7 +290,7 @@ def main(config_path):
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
-        print(f"Using config path: {config_path}")
+        print(f"Using directory config path: {config_path}")
     else:
         print("No config path provided, using default.")
         config_path = None

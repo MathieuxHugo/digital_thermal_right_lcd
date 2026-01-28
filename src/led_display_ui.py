@@ -27,7 +27,7 @@ segmented_digit_layout = {# Position segments in a 7-segment layout
 }
 
 class LEDDisplayUI:
-    def __init__(self, root, config_path="config.json"):
+    def __init__(self, root, config_path="conf/config.json"):
         self.root = root
         # Set dark theme defaults: black background, white font
         self.root.configure(bg='black')
