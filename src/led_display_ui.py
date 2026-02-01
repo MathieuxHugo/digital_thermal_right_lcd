@@ -289,6 +289,36 @@ class LEDDisplayUI:
 
         return 6
 
+    def create_hr10_2280_pro_layout(self, led_frame):
+        # Title frame
+        title_frame = ttk.Frame(led_frame)
+        title_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+        ttk.Label(title_frame, text="NVMe Storage Display", style='Dark.TLabel', font=("Arial", 14)).grid(row=0, column=0)
+
+        # Main display frame with 5 digits + percent_led + speed_unit_led
+        display_frame = ttk.LabelFrame(led_frame, text="Value Display", padding=(10, 10), style='Dark.TLabelframe')
+        display_frame.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+        
+        # Container for digits and degree LED
+        digit_container = ttk.Frame(display_frame)
+        digit_container.grid(row=0, column=0, padx=5, pady=5)
+        
+        # Degree LED above the last digit
+        degree_frame = ttk.Frame(digit_container)
+        degree_frame.grid(row=0, column=4, padx=0, pady=0)
+        self.create_label(degree_frame, "degree_led", "■", 0, 0)
+        
+        digit_frame = ttk.Frame(digit_container)
+        digit_frame.grid(row=1, column=0, columnspan=5, padx=0, pady=0)
+        self.create_segmented_digit_layout(digit_frame, "digit", number_of_digits=5, index=0)
+        
+        unit_frame = ttk.Frame(display_frame)
+        unit_frame.grid(row=0, column=1, padx=10, pady=5)
+        self.create_label(unit_frame, "percent_led", "%", 0, 0)
+        self.create_label(unit_frame, "speed_unit_led", "MB/s", 1, 0)
+
+        return 3
+
     def change_layout_mode(self):
         layout_name = self.layout_mode.get()
         device_conf = get_device_config(layout_name)
@@ -326,6 +356,8 @@ class LEDDisplayUI:
             controls_row_index = self.create_ax120R_layout(led_frame)
         elif layout_name == 'Pearless Assasin 140 BIG':
             controls_row_index = self.create_pa140_big_layout(led_frame)
+        elif layout_name == 'Thermalright HR-10 2280 PRO':
+            controls_row_index = self.create_hr10_2280_pro_layout(led_frame)
         else:
             # default to PA140 layout for any other name
             controls_row_index = self.create_pa140_layout(led_frame)
