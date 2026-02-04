@@ -290,6 +290,8 @@ class LEDDisplayUI:
         return 6
 
     def create_hr10_2280_pro_layout(self, led_frame):
+
+        self.create_color_mode(led_frame)
         # Title frame
         title_frame = ttk.Frame(led_frame)
         title_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
