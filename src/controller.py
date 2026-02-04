@@ -13,26 +13,6 @@ import sys
 
 MINIMUM_MESSAGE_LENGTH = 504  # Minimum length of the message to send to the device
 
-digit_mask = np.array(
-    [
-        [1, 1, 1, 0, 1, 1, 1],  # 0
-        [0, 0, 1, 0, 0, 0, 1],  # 1
-        [0, 1, 1, 1, 1, 1, 0],  # 2
-        [0, 1, 1, 1, 0, 1, 1],  # 3
-        [1, 0, 1, 1, 0, 0, 1],  # 4
-        [1, 1, 0, 1, 0, 1, 1],  # 5
-        [1, 1, 0, 1, 1, 1, 1],  # 6
-        [0, 1, 1, 0, 0, 0, 1],  # 7
-        [1, 1, 1, 1, 1, 1, 1],  # 8
-        [1, 1, 1, 1, 0, 1, 1],  # 9
-        [0, 0, 0, 0, 0, 0, 0],  # nothing
-    ]
-)
-
-letter_mask = {
-    'H': [1, 0, 1, 1, 1, 0, 1],
-}
-
 def _number_to_array(number):
     if number>=10:
         return _number_to_array(int(number/10))+[number%10]
@@ -157,7 +137,6 @@ class Controller:
         return np.array(colors)
     
     def update(self):
-        self.leds = np.array([0] * self.number_of_leds)
         self.config = self.load_config()
         if self.config:
             VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
@@ -256,7 +235,7 @@ class Controller:
                 device_config=device_conf,
             )
         # Note: leds_indexes may have been updated above using device_configurations
-
+        self.leds = np.array([0] * self.number_of_leds)
         if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
             print("Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
             self.VENDOR_ID = VENDOR_ID

@@ -154,4 +154,5 @@ CONFIG_NAMES = [
     'Pearless Assasin 140',
     'TR Assassin X 120R',
     'Pearless Assasin 140 BIG',
+    'Thermalright HR-10 2280 PRO'
 ]

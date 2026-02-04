@@ -22,6 +22,7 @@ class Displayer:
 
     letter_mask = {
         'H': [1, 0, 1, 1, 1, 0, 1],
+        'C': [1, 1, 0, 0, 1, 1, 0],
     }
 
     def __init__(self, leds_indexes, number_of_leds, metrics, metrics_colors, time_colors,
@@ -91,12 +92,15 @@ class Displayer:
             self._set_leds(leds, led_group, 1)
         elif data_source == "off":
             self._set_leds(leds, led_group, 0)
+        elif data_source in self.letter_mask:
+            self._set_leds(leds, led_group, self.letter_mask[data_source])
         else:
+            value = None
             if data_source in time_dict:
                 value = time_dict[data_source]
             elif data_source in Metrics.METRICS_KEYS:
                 metrics_vals = self.metrics.get_metrics(self.temp_unit)
-                value = metrics_vals[data_source]
+                value = int(metrics_vals[data_source])
             if value is not None:
                 digit_count = self.device_config.get_digit_count(led_group)
                 if digit_count<len(str(value)):

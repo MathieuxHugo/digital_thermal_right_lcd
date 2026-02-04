@@ -20,6 +20,16 @@
       "count": 3,
       "leds": {"type": "classic", "start": 2, "stop": 23}
     },
+    "cpu_temp_two_first_digit": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "classic", "start": 2, "stop": 16}
+    },
+    "cpu_temp_last_digit": {
+      "type": "digit",
+      "count": 1,
+      "leds": {"type": "classic", "start": 16, "stop": 23}
+    },
     "cpu_celsius": 23,
     "cpu_fahrenheit": 24,
     "cpu_usage": {
@@ -33,6 +43,16 @@
       "type": "digit",
       "count": 3,
       "leds": {"type": "reversed", "start": 81, "stop": 60}
+    },
+    "gpu_temp_two_first_digit": {
+      "type": "digit",
+      "count": 2,
+      "leds": {"type": "reversed", "start": 81, "stop": 67}
+    },
+    "gpu_temp_last_digit": {
+      "type": "digit",
+      "count": 1,
+      "leds": {"type": "reversed", "start": 67, "stop": 60}
     },
     "gpu_celsius": 59,
     "gpu_fahrenheit": 60,
@@ -69,7 +89,8 @@
     "time": {
       "type": "static",
       "mappings": {
-        "cpu_temp": "hours",
+        "cpu_temp_last_digit": "H",
+        "cpu_temp_two_first_digit": "hours",
         "cpu_usage": "minutes",
         "gpu_usage": "seconds"
       }
@@ -77,7 +98,8 @@
     "time_gpu": {
       "type": "static",
       "mappings": {
-        "cpu_temp": "hours",
+        "cpu_temp_last_digit": "H",
+        "cpu_temp_two_first_digit": "hours",
         "cpu_usage": "minutes",
         "gpu_led": "on",
         "gpu_percent_led": "on",
@@ -94,7 +116,8 @@
         "cpu_temp_unit": "on",
         "cpu_temp": "cpu_temp",
         "cpu_usage": "cpu_usage",
-        "gpu_temp": "hours",
+        "gpu_temp_last_digit": "H",
+        "gpu_temp_two_first_digit": "hours",
         "gpu_usage": "minutes"
       }
     },

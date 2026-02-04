@@ -1,5 +1,5 @@
 {
-    "display_mode": "debug_ui",
+    "display_mode": "usage",
     "metrics": {
         "colors": [
             "ff0000",
