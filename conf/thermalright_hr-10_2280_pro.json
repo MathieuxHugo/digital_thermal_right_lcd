@@ -4,26 +4,41 @@
     "groups": {
       "all": {
         "type": "leds",
-        "leds": {"type": "classic", "start": 0, "stop": 38}
+        "leds": {"type": "reversed", "start": 37, "stop": -1}
       },
       "digit": {
         "type": "digit",
         "count": 5,
-        "leds": {"type": "classic", "start": 0, "stop": 35}
+        "leds": [37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 8, 7, 6, 5, 4, 3, 2]
       },
-      "three_first_digit": {
-        "type": "digit",
-        "count": 3,
-        "leds": {"type": "classic", "start": 0, "stop": 21}
-      },
-      "two_last_digit": {
+      "two_first_digit": {
         "type": "digit",
         "count": 2,
-        "leds": {"type": "classic", "start": 21, "stop": 35}
+        "leds": {"type": "reversed", "start": 37, "stop": 23}
       },
-      "percent_led": 36,
-      "speed_unit_led": 37,
-      "degree_led": 35
+      "four_first_digit": {
+        "type": "digit",
+        "count": 4,
+        "leds": {"type": "reversed", "start": 37, "stop": 9}
+      },
+      "last_two_digit": {
+        "type": "digit",
+        "count": 2,
+        "leds": [16, 15, 14, 13, 12, 11, 10, 8, 7, 6, 5, 4, 3, 2]
+      },
+      "last_digit": {
+        "type": "digit",
+        "count": 1,
+        "leds": {"type": "reversed", "start": 8, "stop": 1}
+      },
+      "third_digit": {
+        "type": "digit",
+        "count": 1,
+        "leds": {"type": "reversed", "start": 23, "stop":16}
+      },
+      "percent_led": 1,
+      "speed_unit_led": 0,
+      "degree_led": 9
     },
     "display_modes": {
       "alternate_metrics": {
@@ -53,8 +68,9 @@
       "time": {
         "type": "static",
         "mappings": {
-          "three_first_digit": "hours",
-          "two_last_digit": "minutes"
+          "two_first_digit": "hours",
+          "third_digit": "H",
+          "last_two_digit": "minutes"
         }
       },
       "usage": {
@@ -67,7 +83,8 @@
       "temp": {
         "type": "static",
         "mappings": {
-            "two_last_digit": "nvme_temp",
+            "four_first_digit": "nvme_temp",
+            "last_digit": "C",
             "degree_led": "on"
           }
       },
