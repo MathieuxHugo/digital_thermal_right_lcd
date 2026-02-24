@@ -1,5 +1,5 @@
 # digital_thermal_right_lcd
-A program that displays temperature on the thermal right cpu cooler's digital screen for Linux.
+A program that displays temperature on the thermal right cpu cooler's Phantom spirit 120 digital evo screen for Linux.
 
 # To build the controller :
 
@@ -26,17 +26,21 @@ Create a file in /etc/systemd/system/digital_lcd_controller.service:
 Write this inside :
 ```
 [Unit]
-Description=Lcd screen controller
+Description=Thermalright LCD Screen Controller
 After=network.target udev.service systemd-modules-load.service
 
 [Service]
-ExecStart=/path/to/the/executable /path/to/the/config.json
+# Set the base directory
+WorkingDirectory=/home/username/Documents/digital_thermal_right_lcd/
+ExecStart=/usr/bin/python3 src/controller.py config.json
 User=yourusername
 Group=yourusername
 Type=simple
 Restart=always
 RestartSec=5s
 
+# This ensures the script can see metrics.py in the src folder
+Environment=PYTHONPATH=/home/username/Documents/digital_thermal_right_lcd/src
 
 [Install]
 WantedBy=multi-user.target
