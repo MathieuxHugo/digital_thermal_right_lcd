@@ -7,7 +7,8 @@ import json
 import glob
 
 try:
-    import pyamdgpuinfo
+    pass
+    #import pyamdgpuinfo
 except Exception as e:
     print("pyamdgpuinfo cannot start : ", str(e))
 
@@ -130,23 +131,33 @@ class Metrics:
             'cpu_watts': 0, 'gpu_watts': 0
         }
         
-        # Carregar GPU vendor da config
+        # This loads the GPU vendor form the config
+        # This is the path where the gpu vendor will be looked for.
         config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json'))
-        try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-                self.gpu_vendor = config.get('gpu_vendor', 'nvidia')
-        except:
-            self.gpu_vendor = 'nvidia'
 
-        # Inicialização AMD
+        # Automatic GPU detection
+        if os.path.exists('/proc/driver/nvidia'):
+            self.gpu_vendor = 'nvidia'
+        elif os.path.exists('/sys/module/amdgpu'):
+            self.gpu_vendor = 'amd'
+        else:
+            try:
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                    # This line reads the gpu_vendor key from the JSON file
+                    self.gpu_vendor = config.get('gpu_vendor', 'nvidia')
+            except:
+                # If the file is missing or broken, nvidia is read by default.
+                self.gpu_vendor = 'nvidia'
+
+        # Init AMD If it read from JSON file
         self.gpu = None
         if self.gpu_vendor == 'amd':
             try:
                 if pyamdgpuinfo.detect_gpus() > 0:
                     self.gpu = pyamdgpuinfo.get_gpu(0)
             except Exception as e:
-                print(f"Erro ao inicializar AMD GPU: {e}")
+                print(f"Error initializing AMD GPU: {e}")
 
         # Mapeamento de candidatos
         candidates =  {

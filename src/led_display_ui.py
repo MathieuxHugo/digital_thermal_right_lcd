@@ -518,25 +518,31 @@ class LEDDisplayUI:
         mode_dropdown["values"] = ["color", "color gradient", "metrics dependent", "time dependent", "random"]
         mode_dropdown.grid(row=0, column=1, padx=5, pady=5)
 
-        metric = "cpu_usage"
-        time_unit = "seconds"
+        metric = "cpu_usage"  # default metric
+        start_color = "#ffffff"
+        end_color = "#ffffff"
+
+        clean_initial_color = initial_color.lstrip('#')
+
         if "random" in initial_color.lower():
-            start_color = "#ffffff"
-            end_color = "#ffffff"
             mode_var.set("random")
+        elif ";" in clean_initial_color:
+            mode_var.set("metrics dependent")
+            parts = clean_initial_color.split(";")
+            metric = parts[0]
+            stops = [p.split(":") for p in parts[1:] if ":" in p]
+            if stops:
+                start_color = f"#{stops[0][0]}"
+                end_color = f"#{stops[-1][0]}" if len(stops) > 1 else start_color
         elif "-" in initial_color:
-            split_color = initial_color.split("-")
-            if len(split_color) == 3:
-                start_color, end_color, key = split_color
-                if key in ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]:
-                    metric = key
-                    mode_var.set("metrics dependent")
-                else:
-                    time_unit = key
-                    mode_var.set("time dependent")
+            mode_var.set("color gradient")  # Treat as gradient
+            parts = clean_initial_color.split("-")
+            start_color = f"#{parts[0]}"
+            # Gracefully handle old broken format like 'ffffff-000000-cpu_usage'
+            if len(parts) > 1 and all(c in '0123456789abcdefABCDEF' for c in parts[1]) and len(parts[1]) == 6:
+                end_color = f"#{parts[1]}"
             else:
-                mode_var.set("color gradient")
-                start_color, end_color = split_color
+                end_color = start_color
         else:
             start_color = initial_color
             end_color = initial_color
@@ -544,7 +550,6 @@ class LEDDisplayUI:
         color1_var = tk.StringVar(value=start_color)
         color2_var = tk.StringVar(value=end_color)
         metric_var = tk.StringVar(value=metric)
-        time_unit_var = tk.StringVar(value=time_unit)
 
         def update_ui(*args):
             if mode_var.get() == "random":
@@ -559,9 +564,7 @@ class LEDDisplayUI:
             color2_entry.grid_remove()
             color2_button.grid_remove()
             metric_dropdown.grid_remove()
-            time_dropdown.grid_remove()
             metric_label.grid_remove()
-            time_label.grid_remove()
             if mode_var.get() == "color gradient":
                 color2_label.grid()
                 color2_entry.grid()
@@ -573,13 +576,12 @@ class LEDDisplayUI:
                 metric_dropdown.grid()
                 metric_label.grid()
             elif mode_var.get() == "time dependent":
+                # Same as color gradient
                 color2_label.grid()
                 color2_entry.grid()
                 color2_button.grid()
-                time_label.grid()
-                time_dropdown.grid()
 
-        mode_var.trace("w", update_ui)
+        mode_var.trace_add("write", update_ui)
 
         color1_label = tk.Label(popup, text="Color 1:")
         color1_label.grid(row=1, column=0, padx=5, pady=5)
@@ -601,12 +603,6 @@ class LEDDisplayUI:
         metric_dropdown["values"] = ["cpu_usage", "cpu_temp", "gpu_usage", "gpu_temp"]
         metric_dropdown.grid(row=3, column=1, padx=5, pady=5)
 
-        time_label = tk.Label(popup, text="Time Unit:")
-        time_label.grid(row=4, column=0, padx=5, pady=5)
-        time_dropdown = ttk.Combobox(popup, textvariable=time_unit_var, state="readonly")
-        time_dropdown["values"] = ["seconds", "minutes", "hours"]
-        time_dropdown.grid(row=4, column=1, padx=5, pady=5)
-
         update_ui()
 
         def on_submit():
@@ -617,9 +613,10 @@ class LEDDisplayUI:
             elif mode_var.get() == "color gradient":
                 result = f"{color1}-{color2}"
             elif mode_var.get() == "metrics dependent":
-                result = f"{color1}-{color2}-{metric_var.get()}"
+                # Create a format compatible with the parser: metric;color1:val1;color2:val2
+                result = f"{metric_var.get()};{color1}:0;{color2}:100"
             elif mode_var.get() == "time dependent":
-                result = f"{color1}-{color2}-{time_unit_var.get()}"
+                result = f"{color1}-{color2}"
             elif mode_var.get() == "random":
                 result = "random"
             popup.result = result
