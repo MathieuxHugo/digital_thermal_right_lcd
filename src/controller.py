@@ -66,7 +66,9 @@ class Controller:
 
     def get_device(self):
         try:
-            return hid.Device(self.VENDOR_ID, self.PRODUCT_ID)
+            d = hid.device()
+            d.open(self.VENDOR_ID, self.PRODUCT_ID)
+            return d
         except Exception as e:
             print(f"Error initializing HID device: {e}")
             return None
@@ -77,19 +79,18 @@ class Controller:
         e atualizando o tamanho do buffer para evitar overflow no display.
         """
         
-        # 1. Converter cores para lista de bytes na ordem BRG (Hardware nativo)
+        # 1. Convert this packets to RGB (Native Hardware)
         all_led_bytes = []
         for i in range(NUMBER_OF_LEDS):
             if self.leds[i] == 0:
                 all_led_bytes.extend([0, 0, 0])
             else:
                 color = self.colors[i]
-                # Hex string para int
                 r = int(color[0:2], 16)
                 g = int(color[2:4], 16)
                 b = int(color[4:6], 16)
-                # Ordem BRG (Blue, Red, Green)
-                all_led_bytes.extend([b, r, g])
+                # Fixed The order to RGB 
+                all_led_bytes.extend([r, g, b])
 
         # ------------------------------------------------------------------
         # PACKET 0: Inicialização (Report ID 0 + 64 bytes)
