@@ -63,3 +63,13 @@ and paste this line :
 
 ## If cpu power doesn't work
 Try running the controller as root or with sudo, alternatively you can give reading access to "/sys/class/powercap/intel-rapl:0/energy_uj" or "/sys/class/powercap/amd-rapl:0/energy_uj" with `sudo chmod +r /sys/class/powercap/intel-rapl:0/energy_uj` (The path may vary depending on your system).
+
+# Support & Community
+
+Please check the Troubleshooting section first! 👆
+
+Whether you need help getting it running or want to discuss new features/contributions:
+
+[Join our Discord](https://discord.gg/3fUw4GMJ5B)
+
+You're also welcome to open a GitHub Discussion for general questions.
