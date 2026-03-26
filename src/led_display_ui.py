@@ -1,13 +1,15 @@
 import tkinter as tk
 from tkinter import ttk, colorchooser
 import json
+import os
 import sys
 from config import default_config, old_layout_mode, MAX_NUMBER_OF_LEDS
 from device_configurations import get_device_config, CONFIG_NAMES
+from config_parser import parse_config_from_dict
+from displayer import Displayer, NullMetrics
 import numpy as np
 import threading
 import time
-from utils import interpolate_color, get_random_color
 
 segmented_digit_layout = {# Position segments in a 7-segment layout
     "top_left":
@@ -68,6 +70,9 @@ class LEDDisplayUI:
             pass
 
         self.config_path = config_path
+        # Directory that contains config.json and the device layout JSON files.
+        # Used by parse_config_from_dict to locate device configurations.
+        self.config_dir = os.path.dirname(os.path.abspath(config_path))
         self.config = self.load_config()
         self.root.title("LED Display Layout")
         # default to PA120 configuration until config is loaded
@@ -375,27 +380,34 @@ class LEDDisplayUI:
         print("Default config set.")
 
     def update_ui_loop(self):
+        """
+        Background thread that refreshes LED colours in the UI each tick.
+
+        Uses the same :class:`~displayer.Displayer` interface as the hardware
+        controller, so the UI preview matches exactly what is sent to the device:
+
+        * Lit LEDs show their resolved colour (static, animated, or metric-driven).
+        * Off LEDs are displayed as black (``#000000``).
+
+        A :class:`~displayer.NullMetrics` stub is used so this thread never
+        blocks on sensor hardware.  Metric-keyed colour gradients will display
+        the start colour in the preview (factor = 0 with all metrics = 0).
+        """
+        cpt = 0
         while True:
             try:
-                current_time = time.time()
-                elapsed_time = (current_time - self.start_time)%(self.cycle_duration*2)
-                colors = np.array(self.config[self.get_color_key()]["colors"])
-                for index in range(self.number_of_leds):
-                    color = colors[index]
-                    if color.lower() == "random":
-                        color = get_random_color()
-                    elif "-" in color:
-                        split_color = color.split("-")
-                        if len(split_color) == 3:
-                            start_color, end_color, metric = split_color
-                            factor=elapsed_time/(self.cycle_duration*2)
-                        else:
-                            start_color, end_color = split_color
-                            factor=abs(elapsed_time-self.cycle_duration)/(self.cycle_duration)
-                        color = interpolate_color(start_color=start_color, end_color=end_color, factor=factor)
-                    self.set_ui_color(index, color="#"+color)
-            except Exception as e:
-                print(f"Error in update_ui_loop: {e}")
+                cfg = parse_config_from_dict(self.config, self.config_dir)
+                displayer = Displayer(cfg, NullMetrics())
+                effective_colors, nb_displays = displayer.get_state(
+                    self.display_mode.get(), cpt
+                )
+                for i in range(self.number_of_leds):
+                    self.set_ui_color(i, "#" + effective_colors[i])
+
+                cycle_ticks = max(1, int(cfg.cycle_duration / cfg.update_interval))
+                cpt = (cpt + 1) % (cycle_ticks * nb_displays)
+            except Exception as exc:
+                print(f"Error in update_ui_loop: {exc}")
             time.sleep(self.update_interval)
 
     def load_config(self):

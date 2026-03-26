@@ -1,12 +1,11 @@
 """Shared helpers for Displayer.get_state non-regression tests."""
 
-import json
 import datetime
-import numpy as np
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from displayer import Displayer
+from config_parser import ParsedConfig
 from device_configurations import get_device_config
 
 REFERENCES_DIR = Path(__file__).parent / "references"
@@ -97,26 +96,27 @@ ALL_DEVICE_NAMES = list(dict.fromkeys(c[0] for c in ALL_TEST_CASES))
 # Deterministic, per-LED color generators
 # ---------------------------------------------------------------------------
 
-def _make_metrics_colors(n_leds: int) -> np.ndarray:
-    """One unique color per LED position for metrics display."""
+def _make_metrics_colors(n_leds: int) -> list:
+    """One unique static hex color per LED position for metrics display."""
     colors = []
     for i in range(n_leds):
         r = (i * 37 + 10) % 256
         g = (i * 71 + 50) % 256
         b = (i * 113 + 100) % 256
         colors.append(f"{r:02x}{g:02x}{b:02x}")
-    return np.array(colors)
+    return colors
 
 
-def _make_time_colors(n_leds: int) -> np.ndarray:
-    """One unique color per LED position for time display (different palette)."""
+def _make_time_colors(n_leds: int) -> list:
+    """One unique static hex color per LED position for time display (different palette)."""
     colors = []
     for i in range(n_leds):
         r = (i * 53 + 150) % 256
         g = (i * 89 + 30) % 256
         b = (i * 127 + 200) % 256
         colors.append(f"{r:02x}{g:02x}{b:02x}")
-    return np.array(colors)
+    return colors
+
 
 # ---------------------------------------------------------------------------
 # Core helper
@@ -132,21 +132,23 @@ def run_get_state(
     """
     Run Displayer.get_state with fully mocked metrics and datetime.
 
+    Builds a ParsedConfig with deterministic per-LED colour specs (unique static
+    colour per LED, easily spotted in diffs) and a MagicMock Metrics instance
+    that returns the given metrics_values.  datetime.datetime.now() is patched
+    to return mock_time so the output is fully deterministic.
+
     Returns a JSON-serialisable dict:
-        {"leds": [...], "colors": [...], "nb_displays": int}
+        {"effective_colors": [...], "nb_displays": int}
     """
     device_config = get_device_config(device_name)
     n_leds = device_config.config_dict.get("total_leds", 84)
 
-    mock_metrics = MagicMock()
-    mock_metrics.get_metrics.return_value = metrics_values.copy()
-
-    displayer = Displayer(
-        leds_indexes=device_config.leds_indexes,
-        number_of_leds=n_leds,
-        metrics=mock_metrics,
-        metrics_colors=_make_metrics_colors(n_leds),
-        time_colors=_make_time_colors(n_leds),
+    cfg = ParsedConfig(
+        device_config=device_config,
+        layout_mode=device_name,
+        display_mode=display_mode,
+        metrics_color_specs=_make_metrics_colors(n_leds),
+        time_color_specs=_make_time_colors(n_leds),
         temp_unit={"cpu": "celsius", "gpu": "celsius"},
         metrics_min_value={
             "cpu_temp": 30, "gpu_temp": 30,
@@ -165,20 +167,24 @@ def run_get_state(
             "nvme_write_speed": 3500, "nvme_usage": 100,
         },
         update_interval=0.1,
+        metrics_update_interval=1.0,
         cycle_duration=5.0,
-        device_config=device_config,
+        vendor_id=0x0416,
+        product_id=0x8001,
     )
+
+    mock_metrics = MagicMock()
+    mock_metrics.get_metrics.return_value = metrics_values.copy()
 
     with patch("displayer.datetime") as mock_dt:
         mock_dt.datetime.now.return_value = mock_time
-        result = displayer.get_state(display_mode, cpt)
+        effective_colors, nb_displays = Displayer(cfg, mock_metrics).get_state(
+            display_mode, cpt
+        )
 
-    leds, colors = result[0], result[1]
-    nb_displays = int(result[2]) if len(result) > 2 else 1
     return {
-        "leds": leds.tolist(),
-        "colors": colors.tolist(),
-        "nb_displays": nb_displays,
+        "effective_colors": effective_colors.tolist(),
+        "nb_displays": int(nb_displays),
     }
 
 
