@@ -16,3 +16,7 @@ readme = "README.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/digital_thermal_right_lcd"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
