@@ -41,11 +41,8 @@ def test_get_state_non_regression(
 
     result = run_get_state(device_name, display_mode, metrics_values, mock_time, cpt)
 
-    assert result["leds"] == reference["leds"], (
-        f"LED state mismatch for {device_name} / {display_mode} / {scenario}"
-    )
-    assert result["colors"] == reference["colors"], (
-        f"Colors mismatch for {device_name} / {display_mode} / {scenario}"
+    assert result["effective_colors"] == reference["effective_colors"], (
+        f"Effective colors mismatch for {device_name} / {display_mode} / {scenario}"
     )
     assert result["nb_displays"] == reference["nb_displays"], (
         f"nb_displays mismatch for {device_name} / {display_mode} / {scenario}"

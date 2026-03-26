@@ -1,280 +1,247 @@
+"""
+controller.py
+=============
+
+Application entry point and HID device driver.
+
+Responsibilities
+----------------
+This module is intentionally thin.  It owns exactly two concerns:
+
+1. **HID communication** — :meth:`Controller.send_packets` formats the
+   per-LED colour array into the binary packet format expected by the
+   Thermal Right cooler firmware and writes it over USB HID.
+
+2. **Main display loop** — :meth:`Controller.display` is the top-level
+   ``while True`` that ties everything together: reload configuration,
+   compute the current LED state, and push the result to the device.
+
+Everything else has been delegated:
+
+* Configuration loading and validation → :mod:`config_parser`
+* LED mask and colour computation → :mod:`displayer`
+* System metric collection → :mod:`metrics`
+
+Packet format
+-------------
+The firmware expects a stream of 128-character (64-byte) hex packets:
+
+* **Packet 0** (first): ``HEADER (20 bytes) || payload slice``
+* **Packet n** (subsequent): ``0x00 || payload slice``
+
+The total colour payload must be at least :data:`MINIMUM_MESSAGE_LENGTH`
+hex characters long, zero-padded with ``0xFF`` bytes if the device has
+fewer LEDs.
+"""
+
 import numpy as np
-from metrics import Metrics
-from device_configurations import get_device_config
-from utils import interpolate_color, get_random_color
-from displayer import DisplayerFactory
 import hid
 import time
-import datetime 
-import json
-import os
 import sys
+import os
 from pathlib import Path
 
+from metrics import Metrics
+from config_parser import load_parsed_config
+from displayer import Displayer
 
-MINIMUM_MESSAGE_LENGTH = 504  # Minimum length of the message to send to the device
 
-def _number_to_array(number):
-    if number>=10:
-        return _number_to_array(int(number/10))+[number%10]
-    else:
-        return [number]
+# Minimum HID payload length in hex characters (each byte = 2 hex chars)
+MINIMUM_MESSAGE_LENGTH = 504
 
-def get_number_array(temp, array_length=3, fill_value=-1):
-    if temp<0:
-        return [fill_value]*array_length
-    else:
-        narray = _number_to_array(temp)
-        if (len(narray)!=array_length):
-            if(len(narray)<array_length):
-                narray = np.concatenate([[fill_value]*(array_length-len(narray)),narray])
-            else:
-                narray = narray[1:]
-        return narray
+# Fixed firmware header prepended to the first HID packet
+HID_HEADER = "dadbdcdd000000000000000000000000fc0000ff"
+
 
 class Controller:
-    def __init__(self, config_path=None):
-        self.temp_unit = {"cpu": "celsius", "gpu": "celsius"}
-        self.metrics = Metrics()
-        self.VENDOR_ID = 0x0416   
-        self.PRODUCT_ID = 0x8001 
-        self.dev = self.get_device()
-        self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
-        # default to PA120 configuration until config is loaded
-        self.config_path = config_path
-        self.leds_indexes = get_device_config('Pearless Assasin 120', config_path).leds_indexes
-        self.number_of_leds = len(self.leds_indexes['all'])
-        self.leds = np.array([0] * self.number_of_leds)
-        # Configurable config path
-        if config_path is None:
-            self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), Path(__file__).parent.parent / "conf"))
-        else:
-            self.config_path = config_path
-        self.cpt = 0  # For alternate_time cycling
-        self.cycle_duration = 50
-        self.display_mode = None
-        self.colors = np.array(["ffe000"] * self.number_of_leds)  # Will be set in update()
-        # Factory to manage displayer creation/reuse
-        self.displayer = None
-        self.update()
+    """
+    HID device controller for Thermal Right ARGB coolers.
 
-    def load_config(self):
-        try:
-            with open(self.config_path+"/config.json", 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading config: {e}")
-            return None
+    The Controller opens the USB HID device, runs the display loop, and sends
+    formatted colour packets to the firmware.  All business logic (config
+    parsing, LED masking, colour resolution) is handled by imported modules.
 
-    def get_device(self):
+    Parameters
+    ----------
+    config_path:
+        Path to the directory containing ``config.json`` and the device
+        layout JSON files, or directly to ``config.json``.  Accepts ``None``
+        for auto-detection via the ``DIGITAL_LCD_CONFIG`` environment variable,
+        falling back to the project's ``conf/`` directory.
+
+    Attributes
+    ----------
+    VENDOR_ID, PRODUCT_ID:
+        USB identifiers of the connected HID device.  Updated from config when
+        they change.
+    cpt:
+        Monotonically increasing tick counter.  Drives colour animations and
+        alternating-display cycling inside :class:`~displayer.Displayer`.
+    """
+
+    VENDOR_ID  = 0x0416
+    PRODUCT_ID = 0x8001
+
+    def __init__(self, config_path: str = None):
+        self.config_path = self._resolve_config_path(config_path)
+        self.metrics     = Metrics()
+        self.dev         = self._open_device()
+        self.cpt         = 0
+
+    # ------------------------------------------------------------------
+    # HID device management
+    # ------------------------------------------------------------------
+
+    def _open_device(self):
+        """
+        Open the HID device.
+
+        Returns the :class:`hid.Device` object on success, or ``None`` if the
+        device is not connected.  The caller is responsible for retrying.
+        """
         try:
             return hid.Device(self.VENDOR_ID, self.PRODUCT_ID)
-        except Exception as e:
-            print(f"Error initializing HID device: {e}")
+        except Exception as exc:
+            print(f"Warning: Could not open HID device: {exc}")
             return None
 
-    def set_leds(self, key, value):
-        try:
-            self.leds[self.leds_indexes[key]] = value
-        except KeyError:
-            print(f"Warning: Key {key} not found in leds_indexes.")
+    # ------------------------------------------------------------------
+    # Packet sending
+    # ------------------------------------------------------------------
 
-    def send_packets(self):
-        message = "".join([self.colors[i] if self.leds[i] != 0 else "000000" for i in range(self.number_of_leds)])
+    def send_packets(self, effective_colors: np.ndarray, update_interval: float) -> None:
+        """
+        Encode per-LED colours into HID packets and write them to the device.
+
+        Parameters
+        ----------
+        effective_colors:
+            Array of six-character hex strings, one per LED.  Off-LEDs must
+            already carry ``"000000"`` — this is guaranteed by
+            :meth:`~displayer.Displayer.get_state`.
+        update_interval:
+            Seconds per display tick.  Used to compute the inter-packet delay
+            that prevents overwhelming the firmware.
+
+        Notes
+        -----
+        The colour payload is assembled by joining all hex strings.  If the
+        resulting string is shorter than :data:`MINIMUM_MESSAGE_LENGTH`
+        characters (devices with few LEDs) it is padded with ``"FF"`` bytes.
+
+        The first packet contains the fixed :data:`HID_HEADER` followed by the
+        first slice of the payload.  All subsequent packets carry a single
+        ``0x00`` prefix byte.
+        """
+        message = "".join(effective_colors)
+
+        # Pad to minimum required firmware length
         if len(message) < MINIMUM_MESSAGE_LENGTH:
             message += "FF" * (MINIMUM_MESSAGE_LENGTH - len(message))
-        packet0 = bytes.fromhex(self.HEADER+message[:128-len(self.HEADER)])
+
+        # First packet: header + initial payload
+        header_len = len(HID_HEADER)
+        packet0 = bytes.fromhex(HID_HEADER + message[:128 - header_len])
         self.dev.write(packet0)
-        packets = message[128-len(self.HEADER):]
-        number_of_packets = int(np.ceil(len(packets)/128))
-        for i in range(number_of_packets):
-            packet = bytes.fromhex('00'+packets[i*128:(i+1)*128])
-            self.dev.write(packet)
-            time.sleep(self.update_interval/(10+number_of_packets))  # small delay to avoid overwhelming the device
 
-    def get_config_colors(self, config, key="metrics"):
-        conf_colors = config.get(key, {}).get('colors', ["ffe000"] * self.number_of_leds)
-        if len(conf_colors) != self.number_of_leds:
-            conf_colors = conf_colors[:(self.number_of_leds)]
-        colors = []
-        for color in conf_colors:
-            if color.lower()=="random":
-                colors.append(get_random_color())
-            elif "-" in color:
-                split_color = color.split("-")
-                if len(split_color) == 3:
-                    start_color, end_color, key = split_color
-                    current_time = datetime.datetime.now()
-                    if key == "seconds":
-                        factor = current_time.second / 59
-                    elif key == "minutes":
-                        factor = current_time.minute / 59
-                    elif key == "hours":
-                        factor = current_time.hour / 23
-                    else:
-                        metric = key
-                        if metric not in self.metrics.get_metrics(self.temp_unit):
-                            print(f"Warning: {metric} not found in metrics, using start color.")
-                            factor = 0
-                        if self.metrics_min_value[metric] == self.metrics_max_value[metric]:
-                            print(f"Warning: {metric} min and max values are the same, using start color.")
-                            factor = 0
-                        else:
-                            factor = (self.metrics.get_metrics(self.temp_unit)[metric]-self.metrics_min_value[metric]) / (self.metrics_max_value[metric]-self.metrics_min_value[metric])
-                            if factor > 1:
-                                factor = 1
-                                print(f"Warning: {metric} value exceeds max value, clamping to 1.")
-                            elif factor < 0:
-                                factor = 0
-                                print(f"Warning: {metric} value below min value, clamping to 0.")
-                else:
-                    start_color, end_color = split_color
+        # Remaining 128-character payload slices
+        rest      = message[128 - header_len:]
+        n_packets = int(np.ceil(len(rest) / 128))
+        delay     = update_interval / (10 + n_packets)
 
-                    factor = 1 - abs((self.cpt%self.cycle_duration)/(self.cycle_duration)-1)
-                
-                colors.append(interpolate_color(start_color, end_color, factor))
-            else:
-                colors.append(color)
-        return np.array(colors)
-    
-    def update(self):
-        self.config = self.load_config()
-        if self.config:
-            VENDOR_ID = int(self.config.get('vendor_id', "0x0416"),16)
-            PRODUCT_ID = int(self.config.get('product_id', "0x8001"),16)
-            # Use device_configurations to obtain leds_indexes and supported display modes
-            layout_name = self.config.get('layout_mode', 'Pearless Assasin 120')
-            device_conf = get_device_config(layout_name, self.config_path)
-            self.leds_indexes = device_conf.leds_indexes
-            self.number_of_leds = len(self.leds_indexes['all'])
-            self.temp_unit = {
-                "cpu": self.config.get('cpu_temperature_unit', 'celsius'),
-                "gpu": self.config.get('gpu_temperature_unit', 'celsius'),
-            }
-            self.metrics_max_value = {
-                "cpu_temp": self.config.get('cpu_max_temp', 90),
-                "gpu_temp": self.config.get('gpu_max_temp', 90),
-                "cpu_usage": self.config.get('cpu_max_usage', 100),
-                "gpu_usage": self.config.get('gpu_max_usage', 100),
-            }
-            self.metrics_min_value = {
-                "cpu_temp": self.config.get('cpu_min_temp', 30),
-                "gpu_temp": self.config.get('gpu_min_temp', 30),
-                "cpu_usage": self.config.get('cpu_min_usage', 0),
-                "gpu_usage": self.config.get('gpu_min_usage', 0),
-            }
-            self.display_mode = self.config.get('display_mode', 'metrics')
-            self.metrics_colors = self.get_config_colors(self.config, key="metrics")
-            self.time_colors = self.get_config_colors(self.config, key="time")
-            self.update_interval = self.config.get('update_interval', 0.1)
-            self.cycle_duration = int(self.config.get('cycle_duration', 5)/self.update_interval)
-            self.metrics.update_interval = self.config.get('metrics_update_interval', 0.5)
+        for i in range(n_packets):
+            chunk = rest[i * 128:(i + 1) * 128]
+            self.dev.write(bytes.fromhex("00" + chunk))
+            time.sleep(delay)
 
-            if self.display_mode not in device_conf.display_modes:
-                print(f"Warning: Display mode {self.display_mode} not compatible with {layout_name} layout, switching to a compatible mode.")
-                # Prefer 'metrics' or 'alternate_metrics' if available, otherwise pick the first supported mode
-                if 'metrics' in device_conf.display_modes:
-                    self.display_mode = 'metrics'
-                elif 'alternate_metrics' in device_conf.display_modes:
-                    self.display_mode = 'alternate_metrics'
-                else:
-                    self.display_mode = device_conf.display_modes[0]
+    # ------------------------------------------------------------------
+    # Main display loop
+    # ------------------------------------------------------------------
 
-            # Use factory to get or reuse appropriate displayer
-            self.displayer = DisplayerFactory.get_displayer(
-                self.leds_indexes,
-                self.number_of_leds,
-                self.metrics,
-                self.metrics_colors,
-                self.time_colors,
-                self.temp_unit,
-                self.metrics_min_value,
-                self.metrics_max_value,
-                self.update_interval,
-                self.cycle_duration,
-                device_config=device_conf,
-            )
-            nvme_disk=self.config.get('nvme_disk', None)
-            if nvme_disk is not None:
-                self.metrics.set_nvme_disk(nvme_disk)
-        else:
-            VENDOR_ID = 0x0416
-            PRODUCT_ID = 0x8001
-            self.metrics_max_value = {
-                "cpu_temp": 90,
-                "gpu_temp": 90,
-                "cpu_usage": 100,
-                "gpu_usage": 100,
-            }
-            self.metrics_min_value = {
-                "cpu_temp": 30,
-                "gpu_temp": 30,
-                "cpu_usage": 0,
-                "gpu_usage": 0,
-            }
-            self.display_mode = 'metrics'
-            self.time_colors = np.array(["ffe000"] * self.number_of_leds)
-            self.metrics_colors = np.array(["ff0000"] * self.number_of_leds)
-            self.update_interval = 0.1
-            self.cycle_duration = int(5/self.update_interval)
-            self.metrics.update_interval = 0.5
-            device_conf = get_device_config('Pearless Assasin 120', self.config_path)
-            self.leds_indexes = device_conf.leds_indexes
-            self.number_of_leds = len(self.leds_indexes['all'])
-            # Use factory for default displayer as well
-            self.displayer = DisplayerFactory.get_displayer(
-                self.leds_indexes,
-                self.number_of_leds,
-                self.metrics,
-                self.metrics_colors,
-                self.time_colors,
-                self.temp_unit,
-                self.metrics_min_value,
-                self.metrics_max_value,
-                self.update_interval,
-                self.cycle_duration,
-                device_config=device_conf,
-            )
-        # Note: leds_indexes may have been updated above using device_configurations
-        self.leds = np.array([0] * self.number_of_leds)
-        if VENDOR_ID != self.VENDOR_ID or PRODUCT_ID != self.PRODUCT_ID:
-            print("Warning: Config VENDOR_ID or PRODUCT_ID changed, reinitializing device.")
-            self.VENDOR_ID = VENDOR_ID
-            self.PRODUCT_ID = PRODUCT_ID
-            self.dev = self.get_device()
+    def display(self) -> None:
+        """
+        Run the display loop indefinitely.
 
-    def display(self):
+        Each iteration:
+
+        1. Reload ``config.json`` from disk — picks up live edits made by the
+           Tkinter UI or a text editor without restarting the process.
+        2. Apply any hardware-identity changes (vendor/product ID).
+        3. If the HID device is not connected, wait and retry.
+        4. Ask :class:`~displayer.Displayer` for the current effective colour array.
+        5. Send colour packets to the device.
+        6. Sleep for ``update_interval`` seconds.
+        """
         while True:
-            self.config = self.load_config()
-            self.update()
+            cfg = load_parsed_config(self.config_path)
+
+            # Update metrics collection interval from config
+            self.metrics.update_interval = cfg.metrics_update_interval
+            if cfg.nvme_disk:
+                self.metrics.set_nvme_disk(cfg.nvme_disk)
+
+            # Reinitialise HID device if vendor/product IDs changed in config
+            if cfg.vendor_id != self.VENDOR_ID or cfg.product_id != self.PRODUCT_ID:
+                self.VENDOR_ID  = cfg.vendor_id
+                self.PRODUCT_ID = cfg.product_id
+                self.dev = self._open_device()
+
             if self.dev is None:
-                print("No device found, with VENDOR_ID: {}, PRODUCT_ID: {}".format(self.VENDOR_ID, self.PRODUCT_ID))
+                print(
+                    f"No HID device found "
+                    f"(vendor=0x{self.VENDOR_ID:04x} "
+                    f"product=0x{self.PRODUCT_ID:04x}). "
+                    f"Retrying in 5 s."
+                )
                 time.sleep(5)
-            else:
-                # Delegate the per-layout display construction to the displayer
+                self.dev = self._open_device()
+                time.sleep(cfg.update_interval)
+                continue
 
-                leds_mask, colors, nb_displays = self.displayer.get_state(self.display_mode, self.cpt)
-                # ensure arrays are numpy arrays of correct length
-                self.leds = np.array(leds_mask, dtype=int)
-                self.colors = np.array(colors)
-            
+            # Compute effective per-LED colours and push to hardware
+            displayer = Displayer(cfg, self.metrics)
+            effective_colors, nb_displays = displayer.get_state(
+                cfg.display_mode, self.cpt
+            )
 
-                self.cpt = (self.cpt + 1) % (self.cycle_duration*nb_displays)
-                self.send_packets()
-            time.sleep(self.update_interval)
+            cycle_ticks = max(1, int(cfg.cycle_duration / cfg.update_interval))
+            self.cpt = (self.cpt + 1) % (cycle_ticks * nb_displays)
+
+            self.send_packets(effective_colors, cfg.update_interval)
+            time.sleep(cfg.update_interval)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _resolve_config_path(config_path: str) -> str:
+        """
+        Resolve the config path, honouring the ``DIGITAL_LCD_CONFIG``
+        environment variable when *config_path* is ``None``.
+        """
+        if config_path is not None:
+            return config_path
+        env = os.environ.get("DIGITAL_LCD_CONFIG")
+        if env:
+            return env
+        return str(Path(__file__).parent.parent / "conf")
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
-def main(config_path):
+def main(config_path: str = None) -> None:
+    """Create a :class:`Controller` and run the display loop."""
     controller = Controller(config_path=config_path)
     controller.display()
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        config_path = sys.argv[1]
-        print(f"Using directory config path: {config_path}")
+
+if __name__ == "__main__":
+    config_path = sys.argv[1] if len(sys.argv) > 1 else None
+    if config_path:
+        print(f"Using config path: {config_path}")
     else:
         print("No config path provided, using default.")
-        config_path = None
     main(config_path)
-
