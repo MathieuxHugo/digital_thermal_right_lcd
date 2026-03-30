@@ -63,11 +63,11 @@ ALL_TEST_CASES = [
     ("Pearless Assasin 120", "time",    "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("Pearless Assasin 120", "time",    "edge",   NORMAL_METRICS, EDGE_TIME,   0),
 
-    # --- Pearless Assasin 140 ---
-    ("Pearless Assasin 140", "cpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
-    ("Pearless Assasin 140", "cpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
-    ("Pearless Assasin 140", "gpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
-    ("Pearless Assasin 140", "gpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
+    # --- Phantom Spirit 120 ---
+    ("Phantom Spirit 120", "cpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
+    ("Phantom Spirit 120", "cpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
+    ("Phantom Spirit 120", "gpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
+    ("Phantom Spirit 120", "gpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
 
     # --- TR Assassin X 120R ---
     ("TR Assassin X 120R", "cpu_temp",  "normal", NORMAL_METRICS, NORMAL_TIME, 0),
@@ -75,11 +75,11 @@ ALL_TEST_CASES = [
     ("TR Assassin X 120R", "cpu_usage", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("TR Assassin X 120R", "cpu_usage", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
 
-    # --- Pearless Assasin 140 BIG ---
-    ("Pearless Assasin 140 BIG", "cpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
-    ("Pearless Assasin 140 BIG", "cpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
-    ("Pearless Assasin 140 BIG", "gpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
-    ("Pearless Assasin 140 BIG", "gpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
+    # --- Pearless Assasin 140 ---
+    ("Pearless Assasin 140", "cpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
+    ("Pearless Assasin 140", "cpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
+    ("Pearless Assasin 140", "gpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
+    ("Pearless Assasin 140", "gpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
 
     # --- Thermalright HR-10 2280 PRO ---
     ("Thermalright HR-10 2280 PRO", "temp",  "normal", NORMAL_METRICS, NORMAL_TIME, 0),

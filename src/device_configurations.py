@@ -151,8 +151,8 @@ def get_device_config(config_name, config_path=None):
 # Device names for UI
 CONFIG_NAMES = [
     'Pearless Assasin 120',
-    'Pearless Assasin 140',
+    'Phantom Spirit 120',
     'TR Assassin X 120R',
-    'Pearless Assasin 140 BIG',
+    'Pearless Assasin 140',
     'Thermalright HR-10 2280 PRO'
 ]

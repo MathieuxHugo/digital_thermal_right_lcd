@@ -168,7 +168,7 @@ def resolve_config_path(config_path: Optional[str]) -> Path:
 
 def load_parsed_config(config_path: Optional[str] = None) -> ParsedConfig:
     """
-    Load, parse, and validate ``config.json``.
+    Load, parse, and validate ``config.json``. Rewrite config.json if necessary.
 
     Parameters
     ----------
@@ -191,6 +191,14 @@ def load_parsed_config(config_path: Optional[str] = None) -> ParsedConfig:
     except Exception as exc:
         print(f"Warning: Could not load config from {json_file}: {exc}. Using defaults.")
         raw = default_config.copy()
+
+    if validate_and_correct_raw_config(raw, config_dir):
+        try:
+            with open(json_file, "w") as fh:
+                json.dump(raw, fh, indent=4)
+            print(f"Config corrections written back to {json_file}.")
+        except Exception as exc:
+            print(f"Warning: Could not write corrected config to {json_file}: {exc}.")
 
     return parse_config_from_dict(raw, config_dir)
 
@@ -286,6 +294,51 @@ def parse_config_from_dict(raw: dict, config_dir: Optional[str] = None) -> Parse
         product_id             = product_id,
         nvme_disk              = raw.get("nvme_disk"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Shared validation helpers
+# ---------------------------------------------------------------------------
+
+def validate_and_correct_raw_config(raw: dict, config_dir: Optional[str] = None) -> bool:
+    """
+    Validate and correct a raw config dict **in-place**.
+
+    Applies the same rules as :func:`parse_config_from_dict` but operates on
+    the raw dict so the result can be serialised back to disk.
+
+    Returns
+    -------
+    bool
+        ``True`` if at least one value was changed, ``False`` if the config
+        was already valid.
+    """
+    changed = False
+
+    layout_mode = raw.get("layout_mode", "Pearless Assasin 120")
+    device_config = get_device_config(layout_mode, config_dir)
+    n_leds = device_config.config_dict.get("total_leds", 84)
+
+    # --- Display mode ------------------------------------------------------
+    corrected_mode = _validate_display_mode(
+        raw.get("display_mode", "metrics"), device_config
+    )
+    if corrected_mode != raw.get("display_mode"):
+        raw["display_mode"] = corrected_mode
+        changed = True
+
+    # --- Colour spec lists -------------------------------------------------
+    fallback_metrics = default_config["metrics"]["colors"]
+    fallback_time    = default_config["time"]["colors"]
+
+    for section, fallback in [("metrics", fallback_metrics), ("time", fallback_time)]:
+        current = raw.get(section, {}).get("colors", fallback)
+        corrected = _normalise_color_specs(current, n_leds, section)
+        if corrected != list(current):
+            raw.setdefault(section, {})["colors"] = corrected
+            changed = True
+
+    return changed
 
 
 # ---------------------------------------------------------------------------

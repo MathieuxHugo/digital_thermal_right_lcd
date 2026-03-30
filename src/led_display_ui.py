@@ -3,9 +3,9 @@ from tkinter import ttk, colorchooser
 import json
 import os
 import sys
-from config import default_config, old_layout_mode, MAX_NUMBER_OF_LEDS
+from config import default_config, old_layout_mode
 from device_configurations import get_device_config, CONFIG_NAMES
-from config_parser import parse_config_from_dict
+from config_parser import parse_config_from_dict, validate_and_correct_raw_config
 from displayer import Displayer, NullMetrics
 import numpy as np
 import threading
@@ -361,7 +361,7 @@ class LEDDisplayUI:
             controls_row_index = self.create_pa120_layout(led_frame, display_frame)
         elif layout_name == 'TR Assassin X 120R':
             controls_row_index = self.create_ax120R_layout(led_frame)
-        elif layout_name == 'Pearless Assasin 140 BIG':
+        elif layout_name == 'Pearless Assasin 140':
             controls_row_index = self.create_pa140_big_layout(led_frame)
         elif layout_name == 'Thermalright HR-10 2280 PRO':
             controls_row_index = self.create_hr10_2280_pro_layout(led_frame)
@@ -416,39 +416,18 @@ class LEDDisplayUI:
                 config = json.load(f)
         except Exception as e:
             print(f"Error loading config: {e}")
-            # Fall back to defaults if available
             try:
                 config = default_config.copy()
             except Exception:
                 config = {}
 
-        # Enforce that every colors list matches the NUMBER_OF_LEDS constant
-        expected_led_count = MAX_NUMBER_OF_LEDS
-
-        for key, val in list(config.items()):
-            if isinstance(val, dict):
-                colors = val.get("colors")
-                if isinstance(colors, list):
-                    current_len = len(colors)
-                    if current_len != expected_led_count:
-                        # Resize: pad with last color or 'ffffff' if empty, or truncate if too long
-                        if current_len == 0:
-                            fill_color = "ffffff"
-                            resized = [fill_color] * expected_led_count
-                        elif current_len < expected_led_count:
-                            last = colors[-1] if colors else "ffffff"
-                            resized = colors + [last] * (expected_led_count - current_len)
-                        else:
-                            resized = colors[:expected_led_count]
-
-                        config[key]["colors"] = resized
-                        # Save corrected config immediately
-                        try:
-                            with open(self.config_path, 'w') as f:
-                                json.dump(config, f, indent=4)
-                            print(f"Adjusted colors for '{key}' from {current_len} to {expected_led_count} and saved config.")
-                        except Exception as e:
-                            print(f"Error saving resized config: {e}")
+        if validate_and_correct_raw_config(config, self.config_dir):
+            try:
+                with open(self.config_path, 'w') as f:
+                    json.dump(config, f, indent=4)
+                print(f"Corrected config saved to {self.config_path}.")
+            except Exception as e:
+                print(f"Error saving corrected config: {e}")
 
         return config
 
