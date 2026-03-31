@@ -1,106 +1,212 @@
 {
-    "name": "Thermalright HR-10 2280 PRO",
-    "total_leds": 38,
-    "groups": {
-      "all": {
-        "type": "leds",
-        "leds": {"type": "reversed", "start": 37, "stop": -1}
-      },
-      "digit": {
-        "type": "digit",
-        "count": 5,
-        "leds": [37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 8, 7, 6, 5, 4, 3, 2]
-      },
-      "two_first_digit": {
-        "type": "digit",
-        "count": 2,
-        "leds": {"type": "reversed", "start": 37, "stop": 23}
-      },
-      "four_first_digit": {
-        "type": "digit",
-        "count": 4,
-        "leds": {"type": "reversed", "start": 37, "stop": 9}
-      },
-      "last_two_digit": {
-        "type": "digit",
-        "count": 2,
-        "leds": [16, 15, 14, 13, 12, 11, 10, 8, 7, 6, 5, 4, 3, 2]
-      },
-      "last_digit": {
-        "type": "digit",
-        "count": 1,
-        "leds": {"type": "reversed", "start": 8, "stop": 1}
-      },
-      "third_digit": {
-        "type": "digit",
-        "count": 1,
-        "leds": {"type": "reversed", "start": 23, "stop":16}
-      },
-      "percent_led": 1,
-      "speed_unit_led": 0,
-      "degree_led": 9
+  "name": "Thermalright HR-10 2280 PRO",
+  "total_leds": 38,
+  "groups": {
+    "all": {
+      "type": "leds",
+      "leds": {
+        "type": "reversed",
+        "start": 37,
+        "stop": -1
+      }
     },
-    "display_modes": {
-      "alternate_metrics": {
-        "type": "alternating",
-        "displays": [
-          "reading_speed",
-          "writting_speed",
-          "usage",
-          "temp"
-        ]
+    "digit": {
+      "type": "digit",
+      "count": 5,
+      "leds": [
+        37,
+        36,
+        35,
+        34,
+        33,
+        32,
+        31,
+        30,
+        29,
+        28,
+        27,
+        26,
+        25,
+        24,
+        23,
+        22,
+        21,
+        20,
+        19,
+        18,
+        17,
+        16,
+        15,
+        14,
+        13,
+        12,
+        11,
+        10,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2
+      ]
+    },
+    "two_first_digit": {
+      "type": "digit",
+      "count": 2,
+      "leds": {
+        "type": "reversed",
+        "start": 37,
+        "stop": 23
+      }
+    },
+    "four_first_digit": {
+      "type": "digit",
+      "count": 4,
+      "leds": {
+        "type": "reversed",
+        "start": 37,
+        "stop": 9
+      }
+    },
+    "last_two_digit": {
+      "type": "digit",
+      "count": 2,
+      "leds": [
+        16,
+        15,
+        14,
+        13,
+        12,
+        11,
+        10,
+        8,
+        7,
+        6,
+        5,
+        4,
+        3,
+        2
+      ]
+    },
+    "last_digit": {
+      "type": "digit",
+      "count": 1,
+      "leds": {
+        "type": "reversed",
+        "start": 8,
+        "stop": 1
+      }
+    },
+    "third_digit": {
+      "type": "digit",
+      "count": 1,
+      "leds": {
+        "type": "reversed",
+        "start": 23,
+        "stop": 16
+      }
+    },
+    "percent_led": 1,
+    "speed_unit_led": 0,
+    "degree_led": 9
+  },
+  "ui_layout": {
+    "grid_width": 14,
+    "grid_height": 5,
+    "color_modes": [
+      "metrics"
+    ],
+    "placements": [
+      {
+        "type": "label",
+        "group": "degree_led",
+        "text": "■",
+        "x": 8,
+        "y": 0
       },
-      "reading_speed": {
-        "type": "static",
-        "mappings": {
-            "speed_unit_led": "on",
-            "digit": "nvme_read_speed"
-        }
+      {
+        "type": "digit",
+        "group": "digit",
+        "x": 0,
+        "y": 1
       },
-      "writting_speed": {
-        "type": "static",
-        "mappings": {
-            "speed_unit_led": "on",
-            "digit": "nvme_write_speed",
-            "degree_led": "on"
-        }
+      {
+        "type": "label",
+        "group": "percent_led",
+        "text": "%",
+        "x": 10,
+        "y": 1
       },
-      "time": {
-        "type": "static",
-        "mappings": {
-          "two_first_digit": "hours",
-          "third_digit": "H",
-          "last_two_digit": "minutes"
-        }
-      },
-      "usage": {
-        "type": "static",
-        "mappings": {
-          "percent_led": "on",
-          "digit": "nvme_usage"
-        }
-      },
-      "temp": {
-        "type": "static",
-        "mappings": {
-            "four_first_digit": "nvme_temp",
-            "last_digit": "C",
-            "degree_led": "on"
-          }
-      },
-      "alternate_time_temp": {
-        "type": "alternating",
-        "displays": [
-          "time",
-          "temp"
-        ]
-      },
-      "debug_ui": {
-        "type": "static",
-        "mappings": {
-          "all": "on"
-        }
+      {
+        "type": "label",
+        "group": "speed_unit_led",
+        "text": "MB/s",
+        "x": 10,
+        "y": 2
+      }
+    ]
+  },
+  "display_modes": {
+    "alternate_metrics": {
+      "type": "alternating",
+      "displays": [
+        "reading_speed",
+        "writting_speed",
+        "usage",
+        "temp"
+      ]
+    },
+    "reading_speed": {
+      "type": "static",
+      "mappings": {
+        "speed_unit_led": "on",
+        "digit": "nvme_read_speed"
+      }
+    },
+    "writting_speed": {
+      "type": "static",
+      "mappings": {
+        "speed_unit_led": "on",
+        "digit": "nvme_write_speed",
+        "degree_led": "on"
+      }
+    },
+    "time": {
+      "type": "static",
+      "mappings": {
+        "two_first_digit": "hours",
+        "third_digit": "H",
+        "last_two_digit": "minutes"
+      }
+    },
+    "usage": {
+      "type": "static",
+      "mappings": {
+        "percent_led": "on",
+        "digit": "nvme_usage"
+      }
+    },
+    "temp": {
+      "type": "static",
+      "mappings": {
+        "four_first_digit": "nvme_temp",
+        "last_digit": "C",
+        "degree_led": "on"
+      }
+    },
+    "alternate_time_temp": {
+      "type": "alternating",
+      "displays": [
+        "time",
+        "temp"
+      ]
+    },
+    "debug_ui": {
+      "type": "static",
+      "mappings": {
+        "all": "on"
       }
     }
   }
-  
+}

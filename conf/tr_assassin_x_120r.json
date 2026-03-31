@@ -2,6 +2,74 @@
   "_comment": "Thermalright Assassin X 120R ARGB White — 31 LED display, USB HID 0416:8001",
   "name": "TR Assassin X 120R",
   "total_leds": 31,
+  "ui_layout": {
+    "grid_width": 6,
+    "grid_height": 7,
+    "color_modes": [
+      "metrics"
+    ],
+    "placements": [
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "CP",
+        "led_index": 0,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "U",
+        "led_index": 1,
+        "x": 2,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "cpu_celsius",
+        "text": "°C",
+        "x": 3,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "GP",
+        "led_index": 0,
+        "x": 0,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "U",
+        "led_index": 1,
+        "x": 2,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "cpu_fahrenheit",
+        "text": "°F",
+        "x": 3,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "cpu_percent_led",
+        "text": "%",
+        "x": 3,
+        "y": 2
+      },
+      {
+        "type": "digit",
+        "group": "digit_frame",
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
   "display_modes": {
     "alternate_metrics": {
       "_comment": "Cycles through cpu_temp, cpu_usage, gpu_temp, gpu_usage automatically.",
@@ -52,12 +120,38 @@
     "_comment": "LED index mapping for the 3-digit 7-segment display. Verified on hardware.",
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 31}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 31
+      }
     },
     "digit_frame": {
       "type": "digit",
       "count": 3,
-      "leds": [14, 9, 10, 15, 13, 12, 11, 21, 16, 17, 22, 20, 19, 18, 28, 23, 24, 29, 27, 26, 25]
+      "leds": [
+        14,
+        9,
+        10,
+        15,
+        13,
+        12,
+        11,
+        21,
+        16,
+        17,
+        22,
+        20,
+        19,
+        18,
+        28,
+        23,
+        24,
+        29,
+        27,
+        26,
+        25
+      ]
     },
     "cpu_celsius": 6,
     "cpu_fahrenheit": 7,
@@ -65,7 +159,13 @@
     "gpu_fahrenheit": 7,
     "gpu_percent_led": 8,
     "cpu_percent_led": 8,
-    "gpu_led": [4, 5],
-    "cpu_led": [2, 3]
+    "gpu_led": [
+      4,
+      5
+    ],
+    "cpu_led": [
+      2,
+      3
+    ]
   }
 }

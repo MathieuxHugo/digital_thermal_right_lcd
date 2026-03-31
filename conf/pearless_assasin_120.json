@@ -4,64 +4,226 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 84}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 84
+      }
     },
     "cpu": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 42}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 42
+      }
     },
     "gpu": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 42, "stop": 84}
+      "leds": {
+        "type": "classic",
+        "start": 42,
+        "stop": 84
+      }
     },
-    "cpu_led": [0, 1],
+    "cpu_led": [
+      0,
+      1
+    ],
     "cpu_temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "classic", "start": 2, "stop": 23}
+      "leds": {
+        "type": "classic",
+        "start": 2,
+        "stop": 23
+      }
     },
     "cpu_temp_two_first_digit": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "classic", "start": 2, "stop": 16}
+      "leds": {
+        "type": "classic",
+        "start": 2,
+        "stop": 16
+      }
     },
     "cpu_temp_last_digit": {
       "type": "digit",
       "count": 1,
-      "leds": {"type": "classic", "start": 16, "stop": 23}
+      "leds": {
+        "type": "classic",
+        "start": 16,
+        "stop": 23
+      }
     },
     "cpu_celsius": 23,
     "cpu_fahrenheit": 24,
     "cpu_usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "classic", "start": 25, "stop": 41}
+      "leds": {
+        "type": "classic",
+        "start": 25,
+        "stop": 41
+      }
     },
     "cpu_percent_led": 41,
-    "gpu_led": [82, 83],
+    "gpu_led": [
+      82,
+      83
+    ],
     "gpu_temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 81, "stop": 60}
+      "leds": {
+        "type": "reversed",
+        "start": 81,
+        "stop": 60
+      }
     },
     "gpu_temp_two_first_digit": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 81, "stop": 67}
+      "leds": {
+        "type": "reversed",
+        "start": 81,
+        "stop": 67
+      }
     },
     "gpu_temp_last_digit": {
       "type": "digit",
       "count": 1,
-      "leds": {"type": "reversed", "start": 67, "stop": 60}
+      "leds": {
+        "type": "reversed",
+        "start": 67,
+        "stop": 60
+      }
     },
     "gpu_celsius": 59,
     "gpu_fahrenheit": 60,
     "gpu_usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 58, "stop": 42}
+      "leds": {
+        "type": "reversed",
+        "start": 58,
+        "stop": 42
+      }
     },
     "gpu_percent_led": 42
+  },
+  "ui_layout": {
+    "grid_width": 14,
+    "grid_height": 10,
+    "color_modes": [
+      "metrics",
+      "time"
+    ],
+    "placements": [
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "C",
+        "led_index": 1,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "PU",
+        "led_index": 0,
+        "x": 1,
+        "y": 0
+      },
+      {
+        "type": "digit",
+        "group": "cpu_temp",
+        "x": 0,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "cpu_celsius",
+        "text": "°C",
+        "x": 6,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "cpu_fahrenheit",
+        "text": "°F",
+        "x": 6,
+        "y": 2
+      },
+      {
+        "type": "digit",
+        "group": "cpu_usage",
+        "overflow_leds": 2,
+        "led_offset": 2,
+        "x": 8,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "cpu_percent_led",
+        "text": "%",
+        "x": 13,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "G",
+        "led_index": 0,
+        "x": 0,
+        "y": 5
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "PU",
+        "led_index": 1,
+        "x": 1,
+        "y": 5
+      },
+      {
+        "type": "digit",
+        "group": "gpu_temp",
+        "x": 0,
+        "y": 6
+      },
+      {
+        "type": "label",
+        "group": "gpu_celsius",
+        "text": "°C",
+        "x": 6,
+        "y": 6
+      },
+      {
+        "type": "label",
+        "group": "gpu_fahrenheit",
+        "text": "°F",
+        "x": 6,
+        "y": 7
+      },
+      {
+        "type": "digit",
+        "group": "gpu_usage",
+        "overflow_leds": 2,
+        "led_offset": 2,
+        "x": 8,
+        "y": 6
+      },
+      {
+        "type": "label",
+        "group": "gpu_percent_led",
+        "text": "%",
+        "x": 13,
+        "y": 6
+      }
+    ]
   },
   "display_modes": {
     "alternate_time": {

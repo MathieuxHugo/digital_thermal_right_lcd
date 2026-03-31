@@ -1,6 +1,117 @@
 {
   "name": "Pearless Assassin 140",
   "total_leds": 124,
+  "ui_layout": {
+    "grid_width": 17,
+    "grid_height": 11,
+    "color_modes": [
+      "metrics"
+    ],
+    "placements": [
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "CPU",
+        "x": 3,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "GPU",
+        "x": 10,
+        "y": 0
+      },
+      {
+        "type": "digit",
+        "group": "temp",
+        "x": 0,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "celsius",
+        "text": "°C",
+        "x": 6,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "fahrenheit",
+        "text": "°F",
+        "x": 6,
+        "y": 2
+      },
+      {
+        "type": "digit",
+        "group": "watt",
+        "x": 8,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "watt_led",
+        "text": "W",
+        "x": 14,
+        "y": 1
+      },
+      {
+        "type": "leds",
+        "group": "middle_led",
+        "orientation": "horizontal",
+        "led_width": 23,
+        "led_height": 8,
+        "x": 0,
+        "y": 5
+      },
+      {
+        "type": "digit",
+        "group": "frequency",
+        "x": 0,
+        "y": 6
+      },
+      {
+        "type": "label",
+        "group": "frequency_led",
+        "text": "MHz",
+        "x": 8,
+        "y": 6
+      },
+      {
+        "type": "digit",
+        "group": "usage",
+        "overflow_leds": 2,
+        "led_offset": 2,
+        "x": 11,
+        "y": 6
+      },
+      {
+        "type": "label",
+        "group": "percent_led",
+        "text": "%",
+        "x": 16,
+        "y": 6
+      },
+      {
+        "type": "leds",
+        "group": "bottom_right",
+        "orientation": "horizontal",
+        "led_width": 15,
+        "led_height": 15,
+        "x": 0,
+        "y": 10
+      },
+      {
+        "type": "leds",
+        "group": "right_led",
+        "orientation": "horizontal",
+        "led_width": 15,
+        "led_height": 20,
+        "x": 10,
+        "y": 10
+      }
+    ]
+  },
   "display_modes": {
     "gpu": {
       "type": "static",
@@ -57,40 +168,72 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 124}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 124
+      }
     },
     "bottom_right": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 10}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 10
+      }
     },
     "percent_led": 10,
     "usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 26, "stop": 10}
+      "leds": {
+        "type": "reversed",
+        "start": 26,
+        "stop": 10
+      }
     },
     "frequency": {
       "type": "digit",
       "count": 4,
-      "leds": {"type": "reversed", "start": 55, "stop": 27}
+      "leds": {
+        "type": "reversed",
+        "start": 55,
+        "stop": 27
+      }
     },
     "middle_led": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 56, "stop": 70}
+      "leds": {
+        "type": "classic",
+        "start": 56,
+        "stop": 70
+      }
     },
     "right_led": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 117, "stop": 124}
+      "leds": {
+        "type": "classic",
+        "start": 117,
+        "stop": 124
+      }
     },
     "watt": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 91, "stop": 70}
+      "leds": {
+        "type": "reversed",
+        "start": 91,
+        "stop": 70
+      }
     },
     "temp": {
       "type": "digit",
       "count": 3,
-      "leds": {"type": "reversed", "start": 114, "stop": 93}
+      "leds": {
+        "type": "reversed",
+        "start": 114,
+        "stop": 93
+      }
     },
     "cpu_led": 116,
     "gpu_led": 115,

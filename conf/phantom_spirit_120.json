@@ -1,6 +1,90 @@
 {
   "name": "Phantom spirit 120 digital evo",
   "total_leds": 93,
+  "ui_layout": {
+    "grid_width": 17,
+    "grid_height": 9,
+    "color_modes": [
+      "metrics"
+    ],
+    "placements": [
+      {
+        "type": "label",
+        "group": "cpu_led",
+        "text": "CPU",
+        "x": 0,
+        "y": 0
+      },
+      {
+        "type": "label",
+        "group": "gpu_led",
+        "text": "GPU",
+        "x": 12,
+        "y": 0
+      },
+      {
+        "type": "digit",
+        "group": "temp",
+        "x": 0,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "celsius",
+        "text": "°C",
+        "x": 6,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "fahrenheit",
+        "text": "°F",
+        "x": 6,
+        "y": 2
+      },
+      {
+        "type": "digit",
+        "group": "watt",
+        "x": 8,
+        "y": 1
+      },
+      {
+        "type": "label",
+        "group": "watt_led",
+        "text": "W",
+        "x": 14,
+        "y": 1
+      },
+      {
+        "type": "digit",
+        "group": "frequency",
+        "x": 0,
+        "y": 5
+      },
+      {
+        "type": "label",
+        "group": "frequency_led",
+        "text": "MHz",
+        "x": 8,
+        "y": 5
+      },
+      {
+        "type": "digit",
+        "group": "usage",
+        "overflow_leds": 2,
+        "led_offset": 2,
+        "x": 11,
+        "y": 5
+      },
+      {
+        "type": "label",
+        "group": "percent_led",
+        "text": "%",
+        "x": 16,
+        "y": 5
+      }
+    ]
+  },
   "display_modes": {
     "gpu": {
       "type": "static",
@@ -57,25 +141,81 @@
   "groups": {
     "all": {
       "type": "leds",
-      "leds": {"type": "classic", "start": 0, "stop": 93}
+      "leds": {
+        "type": "classic",
+        "start": 0,
+        "stop": 93
+      }
     },
     "percent_led": 0,
     "usage": {
       "type": "digit",
       "count": 2,
-      "leds": {"type": "reversed", "start": 16, "stop": 0}
+      "leds": {
+        "type": "reversed",
+        "start": 16,
+        "stop": 0
+      }
     },
     "frequency": {
       "type": "digit",
       "count": 4,
-      "leds": {"type": "reversed", "start": 44, "stop": 16}
+      "leds": {
+        "type": "reversed",
+        "start": 44,
+        "stop": 16
+      }
     },
     "cpu_led": 53,
     "gpu_led": 59,
-    "temp": [49, 50, 51, 48, 45, 46, 47, 57, 58, 60, 56, 52, 54, 55, 65, 66, 67, 64, 61, 62, 63],
+    "temp": [
+      49,
+      50,
+      51,
+      48,
+      45,
+      46,
+      47,
+      57,
+      58,
+      60,
+      56,
+      52,
+      54,
+      55,
+      65,
+      66,
+      67,
+      64,
+      61,
+      62,
+      63
+    ],
     "celsius": 69,
     "fahrenheit": 68,
-    "watt": [74, 75, 76, 73, 70, 71, 72, 81, 82, 83, 80, 77, 78, 79, 88, 89, 90, 87, 84, 85, 86],
+    "watt": [
+      74,
+      75,
+      76,
+      73,
+      70,
+      71,
+      72,
+      81,
+      82,
+      83,
+      80,
+      77,
+      78,
+      79,
+      88,
+      89,
+      90,
+      87,
+      84,
+      85,
+      86
+    ],
     "watt_led": 91,
     "frequency_led": 92
   }

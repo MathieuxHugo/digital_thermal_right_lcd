@@ -34,11 +34,12 @@ hex characters long, zero-padded with ``0xFF`` bytes if the device has
 fewer LEDs.
 """
 
+import argparse
 import numpy as np
 import hid
 import time
-import sys
 import os
+import threading
 from pathlib import Path
 
 from metrics import Metrics
@@ -232,16 +233,55 @@ class Controller:
 # Entry point
 # ---------------------------------------------------------------------------
 
-def main(config_path: str = None) -> None:
-    """Create a :class:`Controller` and run the display loop."""
+def main(config_path: str = None, with_ui: bool = False) -> None:
+    """
+    Create a :class:`Controller` and run the display loop.
+
+    Parameters
+    ----------
+    config_path:
+        Path to ``config.json`` or its parent directory.
+    with_ui:
+        When ``True``, start the hardware display loop in a daemon thread and
+        open the Tkinter configuration UI in the main thread.  Both share the
+        same :class:`~metrics.Metrics` instance so the preview shows live data.
+    """
     controller = Controller(config_path=config_path)
-    controller.display()
+
+    if not with_ui:
+        controller.display()
+        return
+
+    # Launch display loop in background; UI runs in the main thread
+    display_thread = threading.Thread(target=controller.display, daemon=True)
+    display_thread.start()
+
+    import tkinter as tk
+    from ui.app import UIApp
+
+    root = tk.Tk()
+    UIApp(root, config_path=controller.config_path, metrics=controller.metrics)
+    root.mainloop()
 
 
 if __name__ == "__main__":
-    config_path = sys.argv[1] if len(sys.argv) > 1 else None
-    if config_path:
-        print(f"Using config path: {config_path}")
+    parser = argparse.ArgumentParser(description="Thermal Right LCD controller")
+    parser.add_argument(
+        "config_path",
+        nargs="?",
+        default=None,
+        help="Path to config.json or its parent directory",
+    )
+    parser.add_argument(
+        "--ui",
+        action="store_true",
+        help="Open the configuration UI alongside the display loop",
+    )
+    args = parser.parse_args()
+
+    if args.config_path:
+        print(f"Using config path: {args.config_path}")
     else:
         print("No config path provided, using default.")
-    main(config_path)
+
+    main(config_path=args.config_path, with_ui=args.ui)
