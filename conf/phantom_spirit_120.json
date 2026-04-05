@@ -131,10 +131,7 @@
     "debug_ui": {
       "type": "static",
       "mappings": {
-        "usage": "debug",
-        "frequency": "debug",
-        "temp": "debug",
-        "watt": "debug"
+        "all": "on"
       }
     }
   },

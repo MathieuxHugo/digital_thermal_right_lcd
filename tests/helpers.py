@@ -64,11 +64,11 @@ ALL_TEST_CASES = [
     ("Pearless Assasin 120", "time",    "edge",   NORMAL_METRICS, EDGE_TIME,   0),
 
     # --- Phantom Spirit 120 ---
+    ("Phantom Spirit 120", "debug_ui", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("Phantom Spirit 120", "cpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("Phantom Spirit 120", "cpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
     ("Phantom Spirit 120", "gpu", "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("Phantom Spirit 120", "gpu", "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
-
     # --- TR Assassin X 120R ---
     ("TR Assassin X 120R", "cpu_temp",  "normal", NORMAL_METRICS, NORMAL_TIME, 0),
     ("TR Assassin X 120R", "cpu_temp",  "edge",   EDGE_METRICS,   NORMAL_TIME, 0),
