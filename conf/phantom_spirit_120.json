@@ -19,7 +19,7 @@
         "type": "label",
         "group": "gpu_led",
         "text": "GPU",
-        "x": 12,
+        "x": 3,
         "y": 0
       },
       {
@@ -53,7 +53,7 @@
         "group": "watt_led",
         "text": "W",
         "x": 14,
-        "y": 1
+        "y": 3
       },
       {
         "type": "digit",
@@ -65,8 +65,8 @@
         "type": "label",
         "group": "frequency_led",
         "text": "MHz",
-        "x": 8,
-        "y": 5
+        "x": 7,
+        "y": 7
       },
       {
         "type": "digit",
@@ -80,8 +80,8 @@
         "type": "label",
         "group": "percent_led",
         "text": "%",
-        "x": 16,
-        "y": 5
+        "x": 15,
+        "y": 7
       }
     ]
   },
@@ -92,7 +92,12 @@
         "usage": "gpu_usage",
         "frequency": "gpu_frequency",
         "temp": "gpu_temp",
-        "watt": "gpu_watt"
+        "watt": "gpu_watt",
+        "gpu_temp_unit": "on",
+        "percent_led": "on",
+        "frequency_led": "on",
+        "watt_led": "on",
+        "gpu_led": "on"
       }
     },
     "cpu": {
@@ -101,32 +106,18 @@
         "usage": "cpu_usage",
         "frequency": "cpu_frequency",
         "temp": "cpu_temp",
-        "watt": "cpu_watt"
+        "watt": "cpu_watt",
+        "cpu_temp_unit": "on",
+        "percent_led": "on",
+        "frequency_led": "on",
+        "watt_led": "on",
+        "cpu_led": "on"
       }
     },
     "alternate_devices": {
       "type": "alternating",
       "interval": 5,
-      "displays": [
-        {
-          "name": "cpu_metrics",
-          "mappings": {
-            "usage": "cpu_usage",
-            "frequency": "cpu_frequency",
-            "temp": "cpu_temp",
-            "watt": "cpu_watt"
-          }
-        },
-        {
-          "name": "gpu_metrics",
-          "mappings": {
-            "usage": "gpu_usage",
-            "frequency": "gpu_frequency",
-            "temp": "gpu_temp",
-            "watt": "gpu_watt"
-          }
-        }
-      ]
+      "displays": ["cpu","gpu"]
     },
     "debug_ui": {
       "type": "static",
@@ -189,6 +180,8 @@
       63
     ],
     "celsius": 69,
+    "gpu_celsius": 69,
+    "cpu_celsius": 69,
     "fahrenheit": 68,
     "watt": [
       74,
