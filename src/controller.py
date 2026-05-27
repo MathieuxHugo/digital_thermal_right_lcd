@@ -40,16 +40,29 @@ class Controller:
         self.PRODUCT_ID = 0x8001 
         self.dev = self.get_device()
         self.HEADER = 'dadbdcdd000000000000000000000000fc0000ff'
-        # default to PA120 configuration until config is loaded
-        self.config_path = config_path
-        self.leds_indexes = get_device_config('Pearless Assasin 120', config_path).leds_indexes
-        self.number_of_leds = len(self.leds_indexes['all'])
-        self.leds = np.array([0] * self.number_of_leds)
-        # Configurable config path
+        # Resolve config_path before any device loading — supports any device defined in conf/
         if config_path is None:
-            self.config_path = os.environ.get('DIGITAL_LCD_CONFIG', os.path.join(os.path.dirname(os.path.dirname(__file__)), Path(__file__).parent.parent / "conf"))
+            self.config_path = os.environ.get(
+                'DIGITAL_LCD_CONFIG',
+                str(Path(__file__).parent.parent / 'conf')
+            )
         else:
             self.config_path = config_path
+
+        # Load layout_mode from config.json — no hardcoded device name
+        startup_config = self.load_config()
+        layout_name = startup_config.get('layout_mode') if startup_config else None
+        if not layout_name:
+            available = self._list_available_devices()
+            raise ValueError(
+                f"No 'layout_mode' found in {self.config_path}/config.json. "
+                f"Available devices: {available}. "
+                "Add \"layout_mode\": \"<device name>\" to config.json."
+            )
+        device_conf = get_device_config(layout_name, self.config_path)
+        self.leds_indexes = device_conf.leds_indexes
+        self.number_of_leds = len(self.leds_indexes['all'])
+        self.leds = np.array([0] * self.number_of_leds)
         self.cpt = 0  # For alternate_time cycling
         self.cycle_duration = 50
         self.display_mode = None
@@ -65,6 +78,24 @@ class Controller:
         except Exception as e:
             print(f"Error loading config: {e}")
             return None
+
+    def _list_available_devices(self):
+        """Return list of device names available in the conf/ directory.
+        Each JSON file in conf/ (except config.json) defines a supported device.
+        The 'name' field inside the JSON is used as the display name."""
+        conf_dir = Path(self.config_path)
+        devices = []
+        for f in sorted(conf_dir.glob('*.json')):
+            if f.name in ('config.json', 'config.example.json'):
+                continue
+            try:
+                with open(f) as fh:
+                    data = __import__('json').load(fh)
+                    name = data.get('name', f.stem.replace('_', ' ').title())
+                    devices.append(name)
+            except Exception:
+                devices.append(f.stem.replace('_', ' ').title())
+        return devices
 
     def get_device(self):
         try:
@@ -218,7 +249,12 @@ class Controller:
             self.update_interval = 0.1
             self.cycle_duration = int(5/self.update_interval)
             self.metrics.update_interval = 0.5
-            device_conf = get_device_config('Pearless Assasin 120', self.config_path)
+            # No hardcoded fallback — fail clearly so the user knows what to fix
+            available = self._list_available_devices()
+            raise RuntimeError(
+                f"Failed to load config.json from {self.config_path}. "
+                f"Create config.json with 'layout_mode' set to one of: {available}"
+            )
             self.leds_indexes = device_conf.leds_indexes
             self.number_of_leds = len(self.leds_indexes['all'])
             # Use factory for default displayer as well

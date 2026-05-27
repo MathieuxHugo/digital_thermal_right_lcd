@@ -1,15 +1,12 @@
 {
-  "name": "Thermalright Assassin X 120R ARGB",
+  "_comment": "Thermalright Assassin X 120R ARGB White — 31 LED display, USB HID 0416:8001",
+  "name": "TR Assassin X 120R",
   "total_leds": 31,
   "display_modes": {
     "alternate_metrics": {
+      "_comment": "Cycles through cpu_temp, cpu_usage, gpu_temp, gpu_usage automatically.",
       "type": "alternating",
-      "displays": [
-        "cpu_temp",
-        "cpu_usage",
-        "gpu_temp",
-        "gpu_usage"
-      ]
+      "displays": ["cpu_temp", "cpu_usage", "gpu_temp", "gpu_usage"]
     },
     "cpu_temp": {
       "type": "static",
@@ -44,6 +41,7 @@
       }
     },
     "debug_ui": {
+      "_comment": "Turns all 31 LEDs on. Use to verify USB communication and LED mapping.",
       "type": "static",
       "mappings": {
         "all": "on"
@@ -51,6 +49,7 @@
     }
   },
   "groups": {
+    "_comment": "LED index mapping for the 3-digit 7-segment display. Verified on hardware.",
     "all": {
       "type": "leds",
       "leds": {"type": "classic", "start": 0, "stop": 31}
