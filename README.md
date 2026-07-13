@@ -73,3 +73,6 @@ Whether you need help getting it running or want to discuss new features/contrib
 [Join our Discord](https://discord.gg/3fUw4GMJ5B)
 
 You're also welcome to open a GitHub Discussion for general questions.
+
+# Contributors
+- [pippo73](https://github.com/pippo73)
