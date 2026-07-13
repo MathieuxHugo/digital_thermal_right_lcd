@@ -1,0 +1,36 @@
+{
+  "_comment": "Rename this file to config.json and edit as needed.",
+
+  "layout_mode": "TR Assassin X 120R",
+  "_layout_mode_comment": "Must match the 'name' field in one of the JSON files in conf/. Run the controller without config.json to see available devices.",
+
+  "display_mode": "cpu_temp",
+  "_display_mode_comment": "Available modes depend on the device. Common: cpu_temp, gpu_temp, cpu_usage, gpu_usage, alternate_metrics, debug_ui.",
+
+  "cpu_temperature_unit": "celsius",
+  "gpu_temperature_unit": "celsius",
+  "_units_comment": "celsius or fahrenheit",
+
+  "cpu_min_temp": 30,
+  "cpu_max_temp": 90,
+  "gpu_min_temp": 30,
+  "gpu_max_temp": 90,
+  "_temp_range_comment": "Used for color gradient interpolation.",
+
+  "update_interval": 0.1,
+  "_update_interval_comment": "Seconds between display refreshes.",
+
+  "metrics_update_interval": 0.5,
+  "_metrics_update_interval_comment": "Seconds between sensor reads.",
+
+  "metrics": {
+    "colors": ["ffe000"],
+    "_colors_comment": [
+      "Array of hex colors, one per LED (must match total_leds in device JSON).",
+      "Shortcuts: repeat one color for all LEDs.",
+      "Gradient: 'startcolor-endcolor' (e.g. '0000ff-ff0000').",
+      "Dynamic gradient: 'startcolor-endcolor-metric' (e.g. '0000ff-ff0000-cpu_temp').",
+      "Special: 'random'."
+    ]
+  }
+}
