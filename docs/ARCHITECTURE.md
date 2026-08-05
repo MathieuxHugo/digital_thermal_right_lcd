@@ -418,13 +418,11 @@ This means a device config only needs to define groups for both units once; the 
 1. Create `conf/<device_name_slug>.json` following the format above.
    The slug is `device_name.lower().replace(' ', '_')`.
 
-2. Add the human-readable name to `CONFIG_NAMES` in `device_configurations.py`.
+2. Add test cases for the new device in `tests/helpers.py` (`ALL_TEST_CASES`).
 
-3. Add test cases for the new device in `tests/helpers.py` (`ALL_TEST_CASES`).
+3. Run `python tests/generate_references.py --devices "New Device Name"` to create reference files.
 
-4. Run `python tests/generate_references.py --devices "New Device Name"` to create reference files.
-
-5. Run `pytest` to verify the new tests pass.
+4. Run `pytest` to verify the new tests pass.
 
 ---
 

@@ -1,5 +1,5 @@
 {
-    "display_mode": "cpu",
+    "display_mode": "metrics",
     "metrics": {
         "colors": [
             "0a3264",
@@ -85,16 +85,7 @@
             "9a62b4",
             "bfa925",
             "e4f096",
-            "093707",
-            "2e7e78",
-            "53c5e9",
-            "780c5a",
-            "9d53cb",
-            "c29a3c",
-            "e7e1ad",
-            "0c281e",
-            "316f8f",
-            "ffffff"
+            "093707"
         ]
     },
     "time": {
@@ -182,16 +173,7 @@
             "9a62b4",
             "bfa925",
             "e4f096",
-            "093707",
-            "2e7e78",
-            "53c5e9",
-            "780c5a",
-            "9d53cb",
-            "c29a3c",
-            "e7e1ad",
-            "0c281e",
-            "316f8f",
-            "56b600"
+            "093707"
         ]
     },
     "update_interval": 0.1,
@@ -205,5 +187,5 @@
     "vendor_id": "0x0416",
     "cpu_temperature_unit": "celsius",
     "gpu_temperature_unit": "celsius",
-    "layout_mode": "Phantom Spirit 120"
+    "layout_mode": "Pearless Assassin 120"
 }

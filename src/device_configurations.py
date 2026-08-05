@@ -114,14 +114,36 @@ class DeviceConfig:
 
 def load_device_config_from_json(json_path):
     """Load a device configuration from a JSON file."""
-    try:
-        with open(json_path, 'r') as f:
-            config_dict = json.load(f)
-        return DeviceConfig(config_dict)
-    except Exception as e:
-        print(f"Error loading config from {json_path}: {e}")
-        return None
+    with open(json_path, 'r') as f:
+        config_dict = json.load(f)
+    return DeviceConfig(config_dict)
 
+
+def _get_device_name(json_file):
+    """Get the display name of a device config file.
+    The 'name' field inside the JSON is used if present, otherwise the
+    display name is derived from the filename."""
+    try:
+        with open(json_file) as fh:
+            data = json.load(fh)
+        return data.get('name', json_file.stem.replace('_', ' ').title())
+    except Exception:
+        return json_file.stem.replace('_', ' ').title()
+
+
+def _iter_device_config_files(config_path):
+    """Yield (name, path) for each device config file in the conf/ directory.
+    Each JSON file in conf/ (except config.json) defines a supported device."""
+    conf_dir = Path(config_path)
+    for f in sorted(conf_dir.glob('*.json')):
+        if f.name in ('config.json', 'config.example.json'):
+            continue
+        yield _get_device_name(f), f
+
+
+def list_available_devices(config_path):
+    """Return list of device names available in the conf/ directory."""
+    return [name for name, _ in _iter_device_config_files(config_path)]
 
 def get_device_config(config_name, config_path=None):
     """Get a device configuration by name."""
@@ -130,29 +152,14 @@ def get_device_config(config_name, config_path=None):
         config_dir = Path(config_path)
     else:
         config_dir = Path(__file__).parent.parent / "conf"
-    
-    config_file = config_dir / f"{config_name.lower().replace(' ', '_')}.json"
-    
-    if config_file.exists():
-        config = load_device_config_from_json(config_file)
-        if config:
-            return config
-    
-    print(f"Warning: Configuration '{config_name}' not found. Defaulting to Pearless Assasin 120.")
-    # Fallback to default
-    default_file = config_dir / "pearless_assasin_120.json"
-    if default_file.exists():
-        return load_device_config_from_json(default_file)
-    
-    # If no files available, return empty config
-    return DeviceConfig({"groups": {}, "display_modes": {}})
 
+    if config_name:
+        for name, config_file in _iter_device_config_files(config_dir):
+            if name.lower() == config_name.lower():
+                return load_device_config_from_json(config_file)
 
-# Device names for UI
-CONFIG_NAMES = [
-    'Pearless Assasin 120',
-    'Phantom Spirit 120',
-    'TR Assassin X 120R',
-    'Pearless Assasin 140',
-    'Thermalright HR-10 2280 PRO'
-]
+    available = list_available_devices(config_dir)
+    raise RuntimeError(
+        f"Failed to load config.json from {config_dir}. "
+        f"Create config.json with 'layout_mode' set to one of: {available}"
+    )

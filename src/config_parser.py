@@ -229,7 +229,7 @@ def parse_config_from_dict(raw: dict, config_dir: Optional[str] = None) -> Parse
     product_id = int(raw.get("product_id", "0x8001"), 16)
 
     # --- Device layout -------------------------------------------------
-    layout_mode = raw.get("layout_mode", "Pearless Assasin 120")
+    layout_mode = raw.get("layout_mode")
     device_config = get_device_config(layout_mode, config_dir)
     n_leds = device_config.config_dict.get("total_leds", 84)
 

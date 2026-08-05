@@ -38,7 +38,7 @@ from tkinter import ttk
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import default_config, old_layout_mode
-from device_configurations import get_device_config, CONFIG_NAMES
+from device_configurations import get_device_config, list_available_devices
 from config_parser import parse_config_from_dict, validate_and_correct_raw_config
 from displayer import Displayer, NullMetrics
 
@@ -80,7 +80,18 @@ class UIApp:
         self.config = self._load_config()
 
         # --- Device selector ---
-        layout_name = self.config.get("layout_mode", CONFIG_NAMES[0])
+        layout_name = self.config.get("layout_mode")
+        available_layouts = list_available_devices(self.config_dir)
+
+        if not layout_name or layout_name not in available_layouts:
+            if not available_layouts:
+                raise RuntimeError(
+                    f"No device configurations found in {self.config_dir}. "
+                    f"Create a JSON file with 'name' and 'leds_indexes' fields."
+                )
+            print(f"Warning: layout_mode '{layout_name}' not found; using first available: {available_layouts[0]}.")
+            layout_name = available_layouts[0]
+
         if layout_name in old_layout_mode:
             layout_name = old_layout_mode[layout_name]
         self._layout_mode = tk.StringVar(value=layout_name)
@@ -89,7 +100,7 @@ class UIApp:
                                         style="Dark.TLabelframe")
         selector_frame.grid(row=0, column=0, pady=10, sticky="w", padx=10)
         dd = ttk.Combobox(selector_frame, textvariable=self._layout_mode,
-                          values=CONFIG_NAMES, state="readonly", style="Dark.TCombobox")
+                          values=available_layouts, state="readonly", style="Dark.TCombobox")
         dd.grid(row=0, column=0, padx=5, pady=5)
         dd.bind("<<ComboboxSelected>>", lambda _: self._on_device_change())
 
